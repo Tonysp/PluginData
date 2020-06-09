@@ -1,0 +1,6 @@
+name: PluginData
+main: cz.goldminer.tonysp.plugindata.PluginData
+version: ${project.version}
+website: http://www.goldminer.cz
+authors: [Tonysp]
+description: Database access API and cross-server data share.
