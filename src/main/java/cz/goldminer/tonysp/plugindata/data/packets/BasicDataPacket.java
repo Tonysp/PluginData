@@ -1,17 +1,19 @@
-package cz.goldminer.tonysp.plugindata.data;
+package cz.goldminer.tonysp.plugindata.data.packets;
 
-import org.yaml.snakeyaml.external.biz.base64Coder.Base64Coder;
+import cz.goldminer.tonysp.plugindata.data.DataPacketManager;
 
-import java.io.*;
 import java.time.LocalDateTime;
 import java.util.*;
 
 public class BasicDataPacket extends DataPacket {
 
+    public static Builder newBuilder (String applicationId) {
+        return new Builder(applicationId);
+    }
+
     public static class Builder {
 
-        private String pluginId = "";
-        private String messageId = "";
+        private final String applicationId;
         private HashSet<String> receivers;
 
         private String action;
@@ -31,10 +33,13 @@ public class BasicDataPacket extends DataPacket {
         private HashMap<String, UUID> uuidData = new HashMap<>();
         private HashMap<UUID, String> uuidDataInverted = new HashMap<>();
 
-        public BasicDataPacket buildMessage () {
+        public Builder (String applicationId) {
+            this.applicationId = applicationId;
+        }
+
+        public BasicDataPacket buildPacket () {
             return new BasicDataPacket(
-                    pluginId,
-                    messageId,
+                    applicationId,
                     DataPacketManager.getInstance().SERVER_ID,
                     receivers,
                     action,
@@ -55,13 +60,11 @@ public class BasicDataPacket extends DataPacket {
             );
         }
 
-        public Builder pluginId (String pluginId) {
-            this.pluginId = pluginId;
-            return this;
-        }
-
-        public Builder id (String messageId) {
-            this.messageId = messageId;
+        public Builder addReceiver (String serverName) {
+            if (this.receivers == null) {
+                this.receivers = new HashSet<>();
+            }
+            this.receivers.add(serverName);
             return this;
         }
 
@@ -72,14 +75,6 @@ public class BasicDataPacket extends DataPacket {
 
         public Builder action (String action) {
             this.action = action;
-            return this;
-        }
-
-        public Builder addReceiver (String serverName) {
-            if (this.receivers == null) {
-                this.receivers = new HashSet<>();
-            }
-            this.receivers.add(serverName);
             return this;
         }
 
@@ -149,26 +144,25 @@ public class BasicDataPacket extends DataPacket {
         }
     }
 
-    private String action;
-    private int integer;
-    private int integer2;
-    private double doubleValue;
-    private String string;
-    private String string2;
-    private boolean bool;
-    private boolean bool2;
-    private LocalDateTime dateTime;
+    private final String action;
+    private final int integer;
+    private final int integer2;
+    private final double doubleValue;
+    private final String string;
+    private final String string2;
+    private final boolean bool;
+    private final boolean bool2;
+    private final LocalDateTime dateTime;
 
-    private ArrayList<String> stringList;
-    private HashMap<String, String> stringData;
-    private HashMap<String, Integer> intData;
-    private HashMap<String, Double> doubleData;
-    private HashMap<String, UUID> uuidData;
-    private HashMap<UUID, String> uuidDataInverted;
+    private final ArrayList<String> stringList;
+    private final HashMap<String, String> stringData;
+    private final HashMap<String, Integer> intData;
+    private final HashMap<String, Double> doubleData;
+    private final HashMap<String, UUID> uuidData;
+    private final HashMap<UUID, String> uuidDataInverted;
 
     private BasicDataPacket (
-            String pluginId,
-            String messageId,
+            String applicationId,
             String sender,
             HashSet<String> receivers,
             String action,
@@ -187,7 +181,7 @@ public class BasicDataPacket extends DataPacket {
             HashMap<String, UUID> uuidData,
             HashMap<UUID, String> uuidDataInverted
     ) {
-        super(pluginId, messageId, receivers);
+        super(applicationId, receivers);
         this.setSender(sender);
         this.action = action;
         this.integer = integer;
@@ -206,9 +200,7 @@ public class BasicDataPacket extends DataPacket {
         this.uuidDataInverted = uuidDataInverted;
     }
 
-    public static Builder newBuilder () {
-        return new Builder();
-    }
+
 
     public void send () {
         DataPacketManager.getInstance().sendPacket(this);

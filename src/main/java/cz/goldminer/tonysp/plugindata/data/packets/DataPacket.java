@@ -1,25 +1,20 @@
-package cz.goldminer.tonysp.plugindata.data;
+package cz.goldminer.tonysp.plugindata.data.packets;
 
+import cz.goldminer.tonysp.plugindata.data.DataPacketManager;
 import org.yaml.snakeyaml.external.biz.base64Coder.Base64Coder;
 
 import java.io.*;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Optional;
 
 public abstract class DataPacket implements Serializable {
 
-    private final String pluginId;
-    private final String messageId;
+    private final String applicationId;
     private String sender;
     private HashSet<String> receivers;
 
-    public String getPluginId () {
-        return pluginId;
-    }
-
-    public String getMessageId () {
-        return messageId;
+    public String getApplicationId () {
+        return applicationId;
     }
 
     public String getSender () {
@@ -38,16 +33,14 @@ public abstract class DataPacket implements Serializable {
         DataPacketManager.getInstance().sendPacket(this);
     }
 
-    public DataPacket (String pluginId, String messageId, HashSet<String> receivers) {
-        this.pluginId = pluginId;
-        this.messageId = messageId;
+    public DataPacket (String applicationId, HashSet<String> receivers) {
+        this.applicationId = applicationId;
         this.sender = DataPacketManager.getInstance().SERVER_ID;
         this.receivers = receivers;
     }
 
-    public DataPacket (String pluginId, String messageId) {
-        this.pluginId = pluginId;
-        this.messageId = messageId;
+    public DataPacket (String applicationId) {
+        this.applicationId = applicationId;
         this.sender = DataPacketManager.getInstance().SERVER_ID;
     }
 

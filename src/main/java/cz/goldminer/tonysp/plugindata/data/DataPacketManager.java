@@ -1,6 +1,7 @@
 package cz.goldminer.tonysp.plugindata.data;
 
 import cz.goldminer.tonysp.plugindata.PluginData;
+import cz.goldminer.tonysp.plugindata.data.packets.DataPacket;
 import org.bukkit.Bukkit;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
@@ -196,12 +197,12 @@ public class DataPacketManager {
         for (String messageString : stringList) {
             try {
                 DataPacket dataPacket = DataPacket.fromString(messageString);
-                if (packets.containsKey(dataPacket.getPluginId())) {
-                    packets.get(dataPacket.getPluginId()).add(dataPacket);
+                if (packets.containsKey(dataPacket.getApplicationId())) {
+                    packets.get(dataPacket.getApplicationId()).add(dataPacket);
                 } else {
                     ConcurrentLinkedQueue<DataPacket> packetQueue = new ConcurrentLinkedQueue<>();
                     packetQueue.add(dataPacket);
-                    packets.put(dataPacket.getPluginId(), packetQueue);
+                    packets.put(dataPacket.getApplicationId(), packetQueue);
                 }
             } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
