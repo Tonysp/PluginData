@@ -11,15 +11,11 @@ import java.util.logging.Level;
 
 public class PluginData extends JavaPlugin {
 
-    private static PluginData plugin;
-
     private DataPacketManager dataPacketManager;
     private DatabaseManager databaseManager;
 
-
     @Override
     public void onEnable() {
-        plugin = this;
         load();
     }
 
@@ -64,7 +60,7 @@ public class PluginData extends JavaPlugin {
         String redisPassword = getConfig().getString("redis.password", "");
 
         if (clusterId != null && serverId != null) {
-            dataPacketManager = new DataPacketManager(plugin, redisIp, redisPort, redisPassword, clusterId, serverId);
+            dataPacketManager = new DataPacketManager(getInstance(), redisIp, redisPort, redisPassword, clusterId, serverId);
         }
         databaseManager = new DatabaseManager(getConfig());
 
@@ -80,6 +76,6 @@ public class PluginData extends JavaPlugin {
     }
 
     public static PluginData getInstance () {
-        return plugin;
+        return getPlugin(PluginData.class);
     }
 }
