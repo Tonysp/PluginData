@@ -6,6 +6,14 @@ cluster-id: "cluster0"
 # - unique identifier of this server, which will be part of the cluster (cluster-id)
 server-id: "serverOne"
 
+# packet-retrieve-interval
+# - interval in ticks to send and retrieve data packets, setting this below 5 ticks is not recommended
+packet-send-and-retrieve-interval: 5
+
+# clear-old-packets
+# - if the server should discard old packets that were sent when it was offline
+clear-old-packets: true
+
 # redis
 # - redis connection details, this optional, but needed for the data packet functionality
 redis:

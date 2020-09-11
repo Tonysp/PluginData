@@ -26,21 +26,7 @@ public class PluginData extends JavaPlugin {
     }
 
     private void load() {
-
-        if (!(new File(getDataFolder() + File.separator + "config.yml").exists())) {
-            saveDefaultConfig();
-        }
-
-        try {
-            new YamlConfiguration().load(new File(getDataFolder() + File.separator + "config.yml"));
-        } catch (Exception e) {
-            System.out.println("There was a problem loading the config. More details bellow.");
-            System.out.println("-----------------------------------------------");
-            e.printStackTrace();
-            Bukkit.getPluginManager().disablePlugin(this);
-            return;
-        }
-
+        saveDefaultConfig();
         reloadConfig();
 
         log("Loading database connections...");
@@ -59,8 +45,11 @@ public class PluginData extends JavaPlugin {
         int redisPort = getConfig().getInt("redis.port", 6379);
         String redisPassword = getConfig().getString("redis.password", "");
 
+        int packetSendAndRetrieveInterval = getConfig().getInt("packet-send-and-retrieve-interval", 5);
+        boolean clearOldPackets = getConfig().getBoolean("clear-old-packets", true);
+
         if (clusterId != null && serverId != null) {
-            dataPacketManager = new DataPacketManager(getInstance(), redisIp, redisPort, redisPassword, clusterId, serverId);
+            dataPacketManager = new DataPacketManager(getInstance(), redisIp, redisPort, redisPassword, clusterId, serverId, packetSendAndRetrieveInterval, clearOldPackets);
         }
         databaseManager = new DatabaseManager(getConfig());
 
