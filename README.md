@@ -9,7 +9,7 @@ DatabaseManager.getInstance().getConnection("name in config");
 ```
 
 ### DataPacket API for sending data between servers
-You can use the provided [BasicDataPacket](https://github.com/Tonysp/PluginData/blob/master/src/main/java/cz/goldminer/tonysp/plugindata/data/packets/BasicDataPacket.java), or make your own implementation (extend) of the [DataPacket](https://github.com/Tonysp/PluginData/blob/master/src/main/java/cz/goldminer/tonysp/plugindata/data/packets/DataPacket.java) class.
+You can use the provided [BasicDataPacket](https://github.com/Tonysp/PluginData/blob/master/src/main/java/dev/tonysp/plugindata/data/packets/BasicDataPacket.java), or make your own implementation (extend) of the [DataPacket](https://github.com/Tonysp/PluginData/blob/master/src/main/java/dev/tonysp/plugindata/data/packets/DataPacket.java) class.
 Then you can simply create the packet (Builder patter is useful) and send it.
 Example:
 ```java
