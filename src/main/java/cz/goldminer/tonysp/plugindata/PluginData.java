@@ -64,7 +64,7 @@ public class PluginData extends JavaPlugin {
         String redisPassword = getConfig().getString("redis.password", "");
 
         if (clusterId != null && serverId != null) {
-            dataPacketManager = new DataPacketManager(plugin, redisIp, redisPort, redisPassword, clusterId, serverId, getConfig().getStringList("server-id-list"));
+            dataPacketManager = new DataPacketManager(plugin, redisIp, redisPort, redisPassword, clusterId, serverId);
         }
         databaseManager = new DatabaseManager(getConfig());
 

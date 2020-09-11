@@ -11,6 +11,7 @@ import redis.clients.jedis.Transaction;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class DataPacketManager {
@@ -21,11 +22,11 @@ public class DataPacketManager {
     private final int redisPort;
     private JedisPool jedisPool;
     private final int reconnectTicks = 1200;
-    private final BukkitTask reconnectTask;
+    private final BukkitTask reconnectTask, scanServersTask;
 
     public final String CLUSTER_ID;
     public final String SERVER_ID;
-    public final List<String> SERVERS;
+    public final Set<String> SERVERS;
     public final String GLOBAL_KEY_PREFIX = "plugindata-";
     public int PACKETS_PER_QUERY = 1000;
     private boolean isConnected = false;
@@ -33,7 +34,7 @@ public class DataPacketManager {
     private final HashMap<String, ConcurrentLinkedQueue<DataPacket>> packets = new HashMap<>();
     private final ConcurrentLinkedQueue<DataPacket> readyToSend = new ConcurrentLinkedQueue<>();
 
-    public DataPacketManager (PluginData plugin, String redisIp, int redisPort, String redisPassword, String CLUSTER_ID, String SERVER_ID, List<String> SERVERS) {
+    public DataPacketManager (PluginData plugin, String redisIp, int redisPort, String redisPassword, String CLUSTER_ID, String SERVER_ID) {
         instance = this;
         this.redisPassword = redisPassword;
         this.redisIp = redisIp;
@@ -41,23 +42,28 @@ public class DataPacketManager {
 
         this.CLUSTER_ID = CLUSTER_ID;
         this.SERVER_ID = SERVER_ID;
-        this.SERVERS = SERVERS;
-        if (!this.SERVERS.contains(this.SERVER_ID)) {
-            this.SERVERS.add(this.SERVER_ID);
-        }
+        this.SERVERS = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
         reconnectTask = new BukkitRunnable() {
             @Override
-            public void run(){
+            public void run() {
+                isConnected = connect();
+
                 if (isConnected) {
                     startPacketStream();
                     this.cancel();
-                    return;
                 }
-
-                isConnected = connect();
             }
         }.runTaskTimer(plugin, 0, reconnectTicks);
+
+        scanServersTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (isConnected) {
+                    scanServers();
+                }
+            }
+        }.runTaskTimer(plugin, 0, 40);
     }
 
     public static DataPacketManager getInstance () {
@@ -66,6 +72,8 @@ public class DataPacketManager {
 
     public void shutDown () {
         reconnectTask.cancel();
+        scanServersTask.cancel();
+        unregisterServer();
     }
 
     private String getReceivePacketsKey () {
@@ -74,6 +82,10 @@ public class DataPacketManager {
 
     private String getSendPacketsKeyPrefix () {
         return GLOBAL_KEY_PREFIX + "-" + CLUSTER_ID + "-";
+    }
+
+    private String getClusterServersSetKey () {
+        return GLOBAL_KEY_PREFIX + "-" + CLUSTER_ID + "-servers";
     }
 
     private boolean connect () {
@@ -86,13 +98,45 @@ public class DataPacketManager {
         } catch (Exception e) {
             PluginData.log("Error while connecting to Redis! Trying again in " + (reconnectTicks / 20) + " seconds...");
             e.printStackTrace();
+            return false;
+        } finally {
+            Thread.currentThread().setContextClassLoader(previous);
         }
-        Thread.currentThread().setContextClassLoader(previous);
 
         return true;
     }
 
+    private void registerServer () {
+        try (Jedis jedis = jedisPool.getResource()) {
+            jedis.auth(redisPassword);
+            jedis.sadd(getClusterServersSetKey(), SERVER_ID);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void unregisterServer () {
+        try (Jedis jedis = jedisPool.getResource()) {
+            jedis.auth(redisPassword);
+            jedis.srem(getClusterServersSetKey(), SERVER_ID);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void scanServers () {
+        try (Jedis jedis = jedisPool.getResource()) {
+            jedis.auth(redisPassword);
+
+            SERVERS.clear();
+            SERVERS.addAll(jedis.smembers(getClusterServersSetKey()));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     private void startPacketStream () {
+        registerServer();
         clearPackets();
 
         Bukkit.getServer().getScheduler().runTaskTimer(PluginData.getInstance(), () -> {

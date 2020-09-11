@@ -210,57 +210,6 @@ public class BasicDataPacket extends DataPacket {
         return new Builder();
     }
 
-    @Override
-    public String toString () {
-        String message;
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ObjectOutputStream oos = new ObjectOutputStream( baos );
-            oos.writeObject(this);
-            oos.close();
-            message = new String( Base64Coder.encode(baos.toByteArray()) );
-        }catch (IOException e){
-            e.printStackTrace();
-            return null;
-        }
-
-        return message;
-    }
-
-    @Override
-    public int hashCode () {
-        return Objects.hash(
-                getPluginId(),
-                getMessageId(),
-                getSender(),
-                getReceivers(),
-                action,
-                integer,
-                integer2,
-                doubleValue,
-                string,
-                string2,
-                bool,
-                bool2,
-                dateTime,
-                stringList,
-                stringData,
-                intData,
-                doubleData,
-                uuidData,
-                uuidDataInverted
-        );
-    }
-
-    /*public static BasicDataPacket fromString (String s ) throws IOException, ClassNotFoundException {
-        byte [] data = Base64Coder.decode( s );
-        ObjectInputStream ois = new ObjectInputStream(
-                new ByteArrayInputStream(  data ) );
-        BasicDataPacket o  = (BasicDataPacket) ois.readObject();
-        ois.close();
-        return o;
-    }*/
-
     public void send () {
         DataPacketManager.getInstance().sendPacket(this);
     }

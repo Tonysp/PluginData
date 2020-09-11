@@ -5,9 +5,6 @@ cluster-id: "cluster0"
 # server-id
 # - unique identifier of this server, which will be part of the cluster (cluster-id)
 server-id: "serverOne"
-server-id-list:
-  - "serverOne"
-  - "serverTwo"
 
 # redis
 # - redis connection details, this optional, but needed for the data packet functionality
