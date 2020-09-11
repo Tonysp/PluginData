@@ -49,6 +49,11 @@ public class PluginData extends JavaPlugin {
 
         log("Loading database connections...");
 
+        String clusterId = getConfig().getString("cluster-id");
+        if (clusterId == null) {
+            log("Missing cluster-id, data packet functionality disabled");
+        }
+
         String serverId = getConfig().getString("server-id");
         if (serverId == null) {
             log("Missing server-id, data packet functionality disabled");
@@ -58,8 +63,8 @@ public class PluginData extends JavaPlugin {
         int redisPort = getConfig().getInt("redis.port", 6379);
         String redisPassword = getConfig().getString("redis.password", "");
 
-        if (serverId != null) {
-            dataPacketManager = new DataPacketManager(plugin, redisIp, redisPort, redisPassword, serverId, getConfig().getStringList("server-id-list"));
+        if (clusterId != null && serverId != null) {
+            dataPacketManager = new DataPacketManager(plugin, redisIp, redisPort, redisPassword, clusterId, serverId, getConfig().getStringList("server-id-list"));
         }
         databaseManager = new DatabaseManager(getConfig());
 
