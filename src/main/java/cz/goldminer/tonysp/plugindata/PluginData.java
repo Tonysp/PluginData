@@ -13,22 +13,23 @@ public class PluginData extends JavaPlugin {
 
     private static PluginData plugin;
 
-    private DataPacketManager dataManager;
+    private DataPacketManager dataPacketManager;
     private DatabaseManager databaseManager;
 
 
     @Override
     public void onEnable() {
         plugin = this;
-        loadConfig();
+        load();
     }
 
     @Override
     public void onDisable() {
         databaseManager.shutDown();
+        dataPacketManager.shutDown();
     }
 
-    private void loadConfig() {
+    private void load() {
 
         if (!(new File(getDataFolder() + File.separator + "config.yml").exists())) {
             saveDefaultConfig();
@@ -58,7 +59,7 @@ public class PluginData extends JavaPlugin {
         String redisPassword = getConfig().getString("redis.password", "");
 
         if (serverId != null) {
-            dataManager = new DataPacketManager(plugin, redisIp, redisPort, redisPassword, serverId, getConfig().getStringList("server-id-list"));
+            dataPacketManager = new DataPacketManager(plugin, redisIp, redisPort, redisPassword, serverId, getConfig().getStringList("server-id-list"));
         }
         databaseManager = new DatabaseManager(getConfig());
 

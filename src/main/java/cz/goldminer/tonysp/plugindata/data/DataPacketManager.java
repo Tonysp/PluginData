@@ -3,6 +3,7 @@ package cz.goldminer.tonysp.plugindata.data;
 import cz.goldminer.tonysp.plugindata.PluginData;
 import org.bukkit.Bukkit;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.Response;
@@ -20,6 +21,7 @@ public class DataPacketManager {
     private final int redisPort;
     private JedisPool jedisPool;
     private final int reconnectTicks = 1200;
+    private final BukkitTask reconnectTask;
 
     public final String SERVER_ID;
     public final List<String> SERVERS;
@@ -42,7 +44,7 @@ public class DataPacketManager {
             this.SERVERS.add(this.SERVER_ID);
         }
 
-        new BukkitRunnable() {
+        reconnectTask = new BukkitRunnable() {
             @Override
             public void run(){
                 if (isConnected) {
@@ -58,6 +60,10 @@ public class DataPacketManager {
 
     public static DataPacketManager getInstance () {
         return instance;
+    }
+
+    public void shutDown () {
+        reconnectTask.cancel();
     }
 
     private boolean connect () {
