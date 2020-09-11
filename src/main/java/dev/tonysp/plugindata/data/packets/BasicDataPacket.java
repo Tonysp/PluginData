@@ -1,6 +1,6 @@
-package cz.goldminer.tonysp.plugindata.data.packets;
+package dev.tonysp.plugindata.data.packets;
 
-import cz.goldminer.tonysp.plugindata.data.DataPacketManager;
+import dev.tonysp.plugindata.data.DataPacketManager;
 
 import java.time.LocalDateTime;
 import java.util.*;

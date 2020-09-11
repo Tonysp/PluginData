@@ -1,6 +1,6 @@
-package cz.goldminer.tonysp.plugindata.data.packets;
+package dev.tonysp.plugindata.data.packets;
 
-import cz.goldminer.tonysp.plugindata.data.DataPacketManager;
+import dev.tonysp.plugindata.data.DataPacketManager;
 import org.yaml.snakeyaml.external.biz.base64Coder.Base64Coder;
 
 import java.io.*;

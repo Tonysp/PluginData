@@ -1,9 +1,8 @@
-package cz.goldminer.tonysp.plugindata.databases;
+package dev.tonysp.plugindata.databases;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-import cz.goldminer.tonysp.plugindata.PluginData;
-import org.bukkit.Bukkit;
+import dev.tonysp.plugindata.PluginData;
 
 import java.sql.Connection;
 import java.sql.SQLException;

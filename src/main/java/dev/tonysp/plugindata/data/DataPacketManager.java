@@ -1,10 +1,10 @@
-package cz.goldminer.tonysp.plugindata.data;
+package dev.tonysp.plugindata.data;
 
 import co.aikar.taskchain.BukkitTaskChainFactory;
 import co.aikar.taskchain.TaskChain;
 import co.aikar.taskchain.TaskChainFactory;
-import cz.goldminer.tonysp.plugindata.PluginData;
-import cz.goldminer.tonysp.plugindata.data.packets.DataPacket;
+import dev.tonysp.plugindata.PluginData;
+import dev.tonysp.plugindata.data.packets.DataPacket;
 import org.bukkit.Bukkit;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;

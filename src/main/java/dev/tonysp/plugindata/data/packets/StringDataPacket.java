@@ -1,4 +1,4 @@
-package cz.goldminer.tonysp.plugindata.data.packets;
+package dev.tonysp.plugindata.data.packets;
 
 import java.util.HashSet;
 

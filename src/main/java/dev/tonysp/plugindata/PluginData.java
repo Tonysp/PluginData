@@ -1,12 +1,10 @@
-package cz.goldminer.tonysp.plugindata;
+package dev.tonysp.plugindata;
 
-import cz.goldminer.tonysp.plugindata.data.DataPacketManager;
-import cz.goldminer.tonysp.plugindata.databases.DatabaseManager;
+import dev.tonysp.plugindata.data.DataPacketManager;
+import dev.tonysp.plugindata.databases.DatabaseManager;
 import org.bukkit.Bukkit;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.io.File;
 import java.util.logging.Level;
 
 public class PluginData extends JavaPlugin {

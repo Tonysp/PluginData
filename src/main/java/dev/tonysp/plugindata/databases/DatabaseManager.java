@@ -1,6 +1,6 @@
-package cz.goldminer.tonysp.plugindata.databases;
+package dev.tonysp.plugindata.databases;
 
-import cz.goldminer.tonysp.plugindata.PluginData;
+import dev.tonysp.plugindata.PluginData;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 
