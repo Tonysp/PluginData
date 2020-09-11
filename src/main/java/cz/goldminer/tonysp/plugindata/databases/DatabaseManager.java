@@ -1,5 +1,7 @@
 package cz.goldminer.tonysp.plugindata.databases;
 
+import cz.goldminer.tonysp.plugindata.PluginData;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 
 import java.sql.Connection;
@@ -15,12 +17,18 @@ public class DatabaseManager {
     public DatabaseManager (FileConfiguration config) {
         instance = this;
 
-        for (String databaseName : config.getConfigurationSection("mysql-connections").getKeys(false)) {
+        ConfigurationSection mysqlConnectionsConfig = config.getConfigurationSection("mysql-connections");
+        if (mysqlConnectionsConfig == null) {
+            return;
+        }
+
+        for (String databaseName : mysqlConnectionsConfig.getKeys(false)) {
             String url, username, password;
             url = config.getString("mysql-connections." + databaseName + ".url", "");
             username = config.getString("mysql-connections." + databaseName + ".username", "");
             password = config.getString("mysql-connections." + databaseName + ".password", "");
             Database database = new Database(databaseName.toLowerCase(), url, username, password);
+            PluginData.log("Loaded database connection: " + databaseName.toLowerCase());
             database.test();
             databases.put(databaseName.toLowerCase(), database);
         }

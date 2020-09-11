@@ -40,6 +40,7 @@ public class Database {
 
     public boolean test () {
         try (Connection testConnection = hikariDataSource.getConnection()){
+            PluginData.logWarning("Testing connection: " + connectionName + ", SUCCESS!");
             return true;
         } catch (SQLException e) {
             PluginData.logWarning("Testing connection: " + connectionName + ", FAILED!");

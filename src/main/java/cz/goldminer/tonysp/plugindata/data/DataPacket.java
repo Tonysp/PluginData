@@ -12,8 +12,8 @@ import java.util.Optional;
 
 public abstract class DataPacket implements Serializable {
 
-    private String pluginId;
-    private String messageId;
+    private final String pluginId;
+    private final String messageId;
     private String sender;
     private HashSet<String> receivers;
 
