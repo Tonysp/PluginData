@@ -1,9 +1,23 @@
+# cluster-id
+# - defines name of the cluster of servers that can communicate with each other, can be left default
+cluster-id: "cluster0"
+
+# server-id
+# - unique identifier of this server, which will be part of the cluster (cluster-id)
 server-id: "serverOne"
 server-id-list:
   - "serverOne"
   - "serverTwo"
 
+# redis
+# - redis connection details, this optional, but needed for the data packet functionality
+redis:
+  ip: '127.0.0.1'
+  port: 123
+  password: 'password'
 
+# mysql-connections
+# - define as many connections as you want
 mysql-connections:
   global:
     url: jdbc:mysql://localhost:3306/database
@@ -13,8 +27,3 @@ mysql-connections:
     url: jdbc:mysql://localhost:3306/database
     username: username
     password: password
-
-redis:
-  ip: '127.0.0.1'
-  port: 123
-  password: 'password'

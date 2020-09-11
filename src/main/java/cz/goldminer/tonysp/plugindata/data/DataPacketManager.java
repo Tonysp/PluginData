@@ -23,21 +23,23 @@ public class DataPacketManager {
     private final int reconnectTicks = 1200;
     private final BukkitTask reconnectTask;
 
+    public final String CLUSTER_ID;
     public final String SERVER_ID;
     public final List<String> SERVERS;
-    public final String KEY_PREFIX = "plugindata-";
+    public final String GLOBAL_KEY_PREFIX = "plugindata-";
     public int PACKETS_PER_QUERY = 1000;
     private boolean isConnected = false;
 
     private final HashMap<String, ConcurrentLinkedQueue<DataPacket>> packets = new HashMap<>();
     private final ConcurrentLinkedQueue<DataPacket> readyToSend = new ConcurrentLinkedQueue<>();
 
-    public DataPacketManager (PluginData plugin, String redisIp, int redisPort, String redisPassword, String SERVER_ID, List<String> SERVERS) {
+    public DataPacketManager (PluginData plugin, String redisIp, int redisPort, String redisPassword, String CLUSTER_ID, String SERVER_ID, List<String> SERVERS) {
         instance = this;
         this.redisPassword = redisPassword;
         this.redisIp = redisIp;
         this.redisPort = redisPort;
 
+        this.CLUSTER_ID = CLUSTER_ID;
         this.SERVER_ID = SERVER_ID;
         this.SERVERS = SERVERS;
         if (!this.SERVERS.contains(this.SERVER_ID)) {
@@ -64,6 +66,14 @@ public class DataPacketManager {
 
     public void shutDown () {
         reconnectTask.cancel();
+    }
+
+    private String getReceivePacketsKey () {
+        return GLOBAL_KEY_PREFIX + "-" + CLUSTER_ID + "-" + SERVER_ID;
+    }
+
+    private String getSendPacketsKeyPrefix () {
+        return GLOBAL_KEY_PREFIX + "-" + CLUSTER_ID + "-";
     }
 
     private boolean connect () {
@@ -115,7 +125,7 @@ public class DataPacketManager {
         try (Jedis jedis = jedisPool.getResource()) {
             jedis.auth(redisPassword);
 
-            jedis.del(KEY_PREFIX + SERVER_ID);
+            jedis.del(getReceivePacketsKey());
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -126,9 +136,10 @@ public class DataPacketManager {
         try (Jedis jedis = jedisPool.getResource()) {
             jedis.auth(redisPassword);
 
+            String key = getReceivePacketsKey();
             Transaction transaction = jedis.multi();
-            Response<List<String>> response = transaction.lrange(KEY_PREFIX + SERVER_ID, 0, PACKETS_PER_QUERY);
-            transaction.del(KEY_PREFIX + SERVER_ID);
+            Response<List<String>> response = transaction.lrange(key, 0, PACKETS_PER_QUERY);
+            transaction.del(key);
             transaction.exec();
             stringList = response.get();
             if (stringList.size() == 0) {
@@ -169,14 +180,14 @@ public class DataPacketManager {
                 if (messageString == null)
                     continue;
 
+                String keyPrefix = getSendPacketsKeyPrefix();
                 if (message.getReceivers().isPresent()) {
                     message.getReceivers().get()
-                            .forEach(receiver -> jedis.rpush(KEY_PREFIX + receiver, messageString));
+                            .forEach(receiver -> jedis.rpush(keyPrefix + receiver, messageString));
                 } else {
-                    for (String serverId : SERVERS) {
-                        if (!serverId.equalsIgnoreCase(SERVER_ID))
-                            jedis.rpush(KEY_PREFIX + serverId, messageString);
-                    }
+                    SERVERS.stream()
+                            .filter(serverId -> !serverId.equalsIgnoreCase(SERVER_ID))
+                            .forEach(receiver -> jedis.rpush(keyPrefix + receiver, messageString));
                 }
             }
         } catch (Exception e) {
