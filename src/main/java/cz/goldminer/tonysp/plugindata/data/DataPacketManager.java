@@ -2,6 +2,7 @@ package cz.goldminer.tonysp.plugindata.data;
 
 import cz.goldminer.tonysp.plugindata.PluginData;
 import org.bukkit.Bukkit;
+import org.bukkit.scheduler.BukkitRunnable;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.Response;
@@ -15,25 +16,25 @@ public class DataPacketManager {
 
     private static DataPacketManager instance;
 
+    private final String redisIp, redisPassword;
+    private final int redisPort;
     private JedisPool jedisPool;
-    private String redisPassword;
+    private final int reconnectTicks = 1200;
 
     public final String SERVER_ID;
     public final List<String> SERVERS;
     public final String KEY_PREFIX = "plugindata-";
     public int PACKETS_PER_QUERY = 1000;
+    private boolean isConnected = false;
 
-    private HashMap<String, ConcurrentLinkedQueue<DataPacket>> packets = new HashMap<>();
-    private ConcurrentLinkedQueue<DataPacket> readyToSend = new ConcurrentLinkedQueue<>();
+    private final HashMap<String, ConcurrentLinkedQueue<DataPacket>> packets = new HashMap<>();
+    private final ConcurrentLinkedQueue<DataPacket> readyToSend = new ConcurrentLinkedQueue<>();
 
     public DataPacketManager (PluginData plugin, String redisIp, int redisPort, String redisPassword, String SERVER_ID, List<String> SERVERS) {
         instance = this;
         this.redisPassword = redisPassword;
-
-        ClassLoader previous = Thread.currentThread().getContextClassLoader();
-        Thread.currentThread().setContextClassLoader(DataPacketManager.class.getClassLoader());
-        jedisPool = new JedisPool(redisIp, redisPort);
-        Thread.currentThread().setContextClassLoader(previous);
+        this.redisIp = redisIp;
+        this.redisPort = redisPort;
 
         this.SERVER_ID = SERVER_ID;
         this.SERVERS = SERVERS;
@@ -41,16 +42,47 @@ public class DataPacketManager {
             this.SERVERS.add(this.SERVER_ID);
         }
 
-        clearPackets();
+        new BukkitRunnable() {
+            @Override
+            public void run(){
+                if (isConnected) {
+                    startPacketStream();
+                    this.cancel();
+                    return;
+                }
 
-        Bukkit.getServer().getScheduler().runTaskTimer(plugin, () -> {
-            sendPackets();
-            receivePackets();
-        }, 0L, 10L);
+                isConnected = connect();
+            }
+        }.runTaskTimer(plugin, 0, reconnectTicks);
     }
 
     public static DataPacketManager getInstance () {
         return instance;
+    }
+
+    private boolean connect () {
+        ClassLoader previous = Thread.currentThread().getContextClassLoader();
+        Thread.currentThread().setContextClassLoader(DataPacketManager.class.getClassLoader());
+        try {
+            jedisPool = new JedisPool(redisIp, redisPort);
+            jedisPool.getResource();
+            PluginData.log("Successfully connected to Redis!");
+        } catch (Exception e) {
+            PluginData.log("Error while connecting to Redis! Trying again in " + (reconnectTicks / 20) + " seconds...");
+            e.printStackTrace();
+        }
+        Thread.currentThread().setContextClassLoader(previous);
+
+        return true;
+    }
+
+    private void startPacketStream () {
+        clearPackets();
+
+        Bukkit.getServer().getScheduler().runTaskTimer(PluginData.getInstance(), () -> {
+            sendPackets();
+            receivePackets();
+        }, 0L, 5L);
     }
 
     public LinkedList<DataPacket> getReceivedPackets (String pluginId) {
@@ -126,18 +158,19 @@ public class DataPacketManager {
 
             while (!readyToSend.isEmpty()) {
                 DataPacket message = readyToSend.remove();
-                message.setFromServer(SERVER_ID);
                 String messageString = message.toString();
 
-                if (messageString == null) continue;
+                if (messageString == null)
+                    continue;
 
-                if (message.getToServer().equalsIgnoreCase("all")) {
+                if (message.getReceivers().isPresent()) {
+                    message.getReceivers().get()
+                            .forEach(receiver -> jedis.rpush(KEY_PREFIX + receiver, messageString));
+                } else {
                     for (String serverId : SERVERS) {
                         if (!serverId.equalsIgnoreCase(SERVER_ID))
                             jedis.rpush(KEY_PREFIX + serverId, messageString);
                     }
-                } else {
-                    jedis.rpush(KEY_PREFIX + message.getToServer(), messageString);
                 }
             }
         } catch (Exception e) {

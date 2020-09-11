@@ -49,11 +49,17 @@ public class PluginData extends JavaPlugin {
         log("Loading database connections...");
 
         String serverId = getConfig().getString("server-id");
-        String redisIp = getConfig().getString("redis.ip");
-        int redisPort = getConfig().getInt("redis.port");
-        String redisPassword = getConfig().getString("redis.password");
+        if (serverId == null) {
+            log("Missing server-id, data packet functionality disabled");
+        }
 
-        dataManager = new DataPacketManager(plugin, redisIp, redisPort, redisPassword, serverId, getConfig().getStringList("server-id-list"));
+        String redisIp = getConfig().getString("redis.ip", "localhost");
+        int redisPort = getConfig().getInt("redis.port", 6379);
+        String redisPassword = getConfig().getString("redis.password", "");
+
+        if (serverId != null) {
+            dataManager = new DataPacketManager(plugin, redisIp, redisPort, redisPassword, serverId, getConfig().getStringList("server-id-list"));
+        }
         databaseManager = new DatabaseManager(getConfig());
 
         log("...done");
@@ -65,5 +71,9 @@ public class PluginData extends JavaPlugin {
 
     public static void logWarning(String text) {
         Bukkit.getLogger().log(Level.WARNING, "[PluginData] " + text);
+    }
+
+    public static PluginData getInstance () {
+        return plugin;
     }
 }

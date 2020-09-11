@@ -92,25 +92,12 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <relocations>
-                        <relocation>
-                            <pattern>com.zaxxer</pattern>
-                            <shadedPattern>cz.goldminer.tonysp.plugindata.com.zaxxer</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>org.postgresql</pattern>
-                            <shadedPattern>cz.goldminer.tonysp.plugindata.org.postgresql</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>redis.clients</pattern>
-                            <shadedPattern>cz.goldminer.tonysp.plugindata.redis.clients</shadedPattern>
-                        </relocation>
-                    </relocations>
                     <artifactSet>
                         <includes>
                             <include>com.zaxxer:*</include>
                             <include>org.postgresql:*</include>
-                            <include>redis.clients:*</include>
+                            <include>redis.clients:jedis:*:*</include>
+                            <include>org.apache.commons:commons-pool2:*:*</include>
                         </includes>
                     </artifactSet>
                 </configuration>
