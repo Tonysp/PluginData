@@ -20,7 +20,7 @@ BasicDataPacket.newBuilder("my plugin")
         .buildPacket()
         .send();
 ```
-In this example, the id of the packet is "my plugin", the contents are one String and Integer and the packed would be received by "server 2".
+In this example, the id of the application is "my plugin", the contents are one String and Integer and the packed would be received by "server 2".
 If you want to send the packet to every server, you can omit the addReceiver method.
 
 To receive all DataPackets which were sent to you, you can do the following:
