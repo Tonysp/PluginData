@@ -5,7 +5,7 @@ Bukkit plugin for easy database connection management and sending data between p
 1. Set up any number of MySQL databases in the config.yml
 2. Get connection using the getConnection() method (thread safe).
 ```java
-DatabaseManager.getInstance().getConnection("name");
+DatabaseManager.getInstance().getConnection("name in config");
 ```
 
 ### DataPacket API for sending data between servers
