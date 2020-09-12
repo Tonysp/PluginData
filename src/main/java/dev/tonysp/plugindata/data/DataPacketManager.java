@@ -86,7 +86,9 @@ public class DataPacketManager {
 
     private void startPacketStream () {
         registerServer();
-        clearPackets();
+        if (getInstance().CLEAR_OLD_PACKETS) {
+            clearPackets();
+        }
 
         Bukkit.getServer().getScheduler().runTaskTimer(PluginData.getInstance(), () -> {
             if (!sendAndReceivePackets) {
