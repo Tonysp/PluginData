@@ -1,6 +1,7 @@
 package dev.tonysp.plugindata.data.packets;
 
 import dev.tonysp.plugindata.data.DataPacketManager;
+import dev.tonysp.plugindata.data.Pipeline;
 import org.yaml.snakeyaml.external.biz.base64Coder.Base64Coder;
 
 import java.io.*;
@@ -9,6 +10,7 @@ import java.util.Optional;
 
 public abstract class DataPacket implements Serializable {
 
+    private Pipeline pipeline;
     private final String applicationId;
     private String sender;
     private HashSet<String> receivers;
@@ -29,7 +31,17 @@ public abstract class DataPacket implements Serializable {
         this.sender = sender;
     }
 
+    public Pipeline getPipeline () {
+        return pipeline;
+    }
+
     public void send () {
+        this.pipeline = Pipeline.PUBSUB;
+        DataPacketManager.getInstance().sendPacket(this);
+    }
+
+    public void send (Pipeline pipeline) {
+        this.pipeline = pipeline;
         DataPacketManager.getInstance().sendPacket(this);
     }
 

@@ -19,6 +19,7 @@ public class BasicDataPacket extends DataPacket {
         private String action;
         private int integer;
         private int integer2;
+        private long longValue;
         private double doubleValue;
         private String string;
         private String string2;
@@ -45,6 +46,7 @@ public class BasicDataPacket extends DataPacket {
                     action,
                     integer,
                     integer2,
+                    longValue,
                     doubleValue,
                     string,
                     string2,
@@ -85,6 +87,11 @@ public class BasicDataPacket extends DataPacket {
 
         public Builder integer2 (int integer2) {
             this.integer2 = integer2;
+            return this;
+        }
+
+        public Builder longValue (long longValue) {
+            this.longValue = longValue;
             return this;
         }
 
@@ -147,6 +154,7 @@ public class BasicDataPacket extends DataPacket {
     private final String action;
     private final int integer;
     private final int integer2;
+    private final long longValue;
     private final double doubleValue;
     private final String string;
     private final String string2;
@@ -168,6 +176,7 @@ public class BasicDataPacket extends DataPacket {
             String action,
             int integer,
             int integer2,
+            long longValue,
             double doubleValue,
             String string,
             String string2,
@@ -186,6 +195,7 @@ public class BasicDataPacket extends DataPacket {
         this.action = action;
         this.integer = integer;
         this.integer2 = integer2;
+        this.longValue = longValue;
         this.doubleValue = doubleValue;
         this.string = string;
         this.string2 = string2;
@@ -198,12 +208,6 @@ public class BasicDataPacket extends DataPacket {
         this.doubleData = doubleData;
         this.uuidData = uuidData;
         this.uuidDataInverted = uuidDataInverted;
-    }
-
-
-
-    public void send () {
-        DataPacketManager.getInstance().sendPacket(this);
     }
 
     public LocalDateTime getDateTime () {
@@ -240,6 +244,10 @@ public class BasicDataPacket extends DataPacket {
 
     public int getInteger2() {
         return integer2;
+    }
+
+    public long getLong () {
+        return longValue;
     }
 
     public double getDouble() {

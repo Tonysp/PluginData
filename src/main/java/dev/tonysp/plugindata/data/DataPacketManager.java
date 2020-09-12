@@ -4,20 +4,18 @@ import co.aikar.taskchain.BukkitTaskChainFactory;
 import co.aikar.taskchain.TaskChain;
 import co.aikar.taskchain.TaskChainFactory;
 import dev.tonysp.plugindata.PluginData;
+import dev.tonysp.plugindata.data.events.DataPacketReceivePubSubEvent;
 import dev.tonysp.plugindata.data.packets.DataPacket;
+import dev.tonysp.plugindata.data.runnables.PublisherRunnable;
+import dev.tonysp.plugindata.data.runnables.SubscriberRunnable;
 import org.bukkit.Bukkit;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.Response;
-import redis.clients.jedis.Transaction;
+import redis.clients.jedis.*;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 public class DataPacketManager {
 
@@ -32,17 +30,22 @@ public class DataPacketManager {
     private TaskChainFactory taskChainFactory;
     private boolean sendAndReceivePackets = true;
 
+    private Thread publisherThread;
+    private Thread subscriberThread;
+    private JedisPubSub jedisPubSub;
+
     public final String CLUSTER_ID;
     public final String SERVER_ID;
     public final Set<String> SERVERS;
-    public final String GLOBAL_KEY_PREFIX = "plugindata-";
+    public final String GLOBAL_KEY_PREFIX = "plugindata";
     private final int RECONNECT_TICKS = 1200;
     private final int PACKET_SEND_AND_RETRIEVE_INTERVAL;
     private final boolean CLEAR_OLD_PACKETS;
     public int PACKETS_PER_QUERY = 1000;
 
-    private final HashMap<String, ConcurrentLinkedQueue<DataPacket>> packets = new HashMap<>();
-    private final ConcurrentLinkedQueue<DataPacket> readyToSend = new ConcurrentLinkedQueue<>();
+    private final HashMap<String, ConcurrentLinkedQueue<DataPacket>> received = new HashMap<>();
+    private final ConcurrentLinkedQueue<DataPacket> readyToSendBatch = new ConcurrentLinkedQueue<>();
+    private final LinkedBlockingQueue<DataPacket> readyToSendPubSub = new LinkedBlockingQueue<>();
 
     public DataPacketManager (PluginData plugin, String redisIp, int redisPort, String redisPassword, String CLUSTER_ID, String SERVER_ID, int PACKET_SEND_AND_RETRIEVE_INTERVAL, boolean CLEAR_OLD_PACKETS) {
         instance = this;
@@ -84,11 +87,17 @@ public class DataPacketManager {
         return instance;
     }
 
+    public LinkedBlockingQueue<DataPacket> getReadyToSendPubSub () {
+        return readyToSendPubSub;
+    }
+
     private void startPacketStream () {
         registerServer();
         if (getInstance().CLEAR_OLD_PACKETS) {
             clearPackets();
         }
+        startSubscriber();
+        startPublisher();
 
         Bukkit.getServer().getScheduler().runTaskTimer(PluginData.getInstance(), () -> {
             if (!sendAndReceivePackets) {
@@ -108,17 +117,33 @@ public class DataPacketManager {
         reconnectTask.cancel();
         scanServersTask.cancel();
         unregisterServer();
+        jedisPubSub.unsubscribe();
+        if (subscriberThread != null) {
+            try {
+                subscriberThread.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        if (publisherThread != null) {
+            publisherThread.interrupt();
+            try {
+                publisherThread.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
-    private String getReceivePacketsKey () {
+    public String getReceivePacketsKey () {
         return GLOBAL_KEY_PREFIX + "-" + CLUSTER_ID + "-" + SERVER_ID;
     }
 
-    private String getSendPacketsKeyPrefix () {
+    public String getSendPacketsKeyPrefix () {
         return GLOBAL_KEY_PREFIX + "-" + CLUSTER_ID + "-";
     }
 
-    private String getClusterServersSetKey () {
+    public String getClusterServersSetKey () {
         return GLOBAL_KEY_PREFIX + "-" + CLUSTER_ID + "-servers";
     }
 
@@ -179,24 +204,24 @@ public class DataPacketManager {
 
     public <T> LinkedList<T> getReceivedPackets (String applicationId, Class<T> dataPacketClass) {
         String key = getDataPacketKeyFromClass(applicationId, dataPacketClass);
-        if (!packets.containsKey(key)) {
+        if (!received.containsKey(key)) {
             ConcurrentLinkedQueue<DataPacket> dataPackets = new ConcurrentLinkedQueue<>();
-            packets.put(key, dataPackets);
+            received.put(key, dataPackets);
             return new LinkedList<>();
         }
 
         LinkedList<T> dataPackets = new LinkedList<>();
-        DataPacket dataPacket = packets.get(key).poll();
+        DataPacket dataPacket = received.get(key).poll();
         while (dataPacket != null) {
             dataPackets.add((T) dataPacket);
-            dataPacket = packets.get(key).poll();
+            dataPacket = received.get(key).poll();
         }
         return dataPackets;
     }
 
     public LinkedList<? extends DataPacket> getReceivedPackets (String applicationId) {
         LinkedList<DataPacket> dataPackets = new LinkedList<>();
-        packets.entrySet().stream()
+        received.entrySet().stream()
                 .filter(entry -> entry.getKey().startsWith(applicationId))
                 .forEach(entry -> {
             DataPacket dataPacket = entry.getValue().poll();
@@ -209,8 +234,12 @@ public class DataPacketManager {
         return dataPackets;
     }
 
-    public void sendPacket (DataPacket message) {
-        readyToSend.add(message);
+    public void sendPacket (DataPacket dataPacket) {
+        if (dataPacket.getPipeline() == Pipeline.BATCH) {
+            readyToSendBatch.add(dataPacket);
+        } else {
+            readyToSendPubSub.add(dataPacket);
+        }
     }
 
     private void clearPackets () {
@@ -245,12 +274,12 @@ public class DataPacketManager {
             try {
                 DataPacket dataPacket = DataPacket.fromString(messageString);
                 String key = getDataPacketKeyFromClass(dataPacket.getApplicationId(), dataPacket.getClass());
-                if (packets.containsKey(key)) {
-                    packets.get(key).add(dataPacket);
+                if (received.containsKey(key)) {
+                    received.get(key).add(dataPacket);
                 } else {
                     ConcurrentLinkedQueue<DataPacket> packetQueue = new ConcurrentLinkedQueue<>();
                     packetQueue.add(dataPacket);
-                    packets.put(key, packetQueue);
+                    received.put(key, packetQueue);
                 }
             } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
@@ -258,25 +287,52 @@ public class DataPacketManager {
         }
     }
 
+    private void startPublisher () {
+        PublisherRunnable publisherRunnable = new PublisherRunnable(jedisPool, redisPassword);
+        publisherThread = new Thread(publisherRunnable);
+        publisherThread.start();
+    }
+
+    public JedisPubSub startSubscriber () {
+        jedisPubSub = new JedisPubSub() {
+            @Override
+            public void onMessage(String channel, String messageString) {
+                try {
+                    DataPacket dataPacket = DataPacket.fromString(messageString);
+                    DataPacketReceivePubSubEvent event = new DataPacketReceivePubSubEvent(true, dataPacket);
+                    Bukkit.getPluginManager().callEvent(event);
+                } catch (IOException | ClassNotFoundException e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+
+        SubscriberRunnable subscriberRunnable = new SubscriberRunnable(jedisPool, redisPassword, jedisPubSub);
+        subscriberThread = new Thread(subscriberRunnable);
+        subscriberThread.start();
+
+        return jedisPubSub;
+    }
+
     private void sendPackets () {
-        if (readyToSend.isEmpty()) {
+        if (readyToSendBatch.isEmpty()) {
             return;
         }
 
         try (Jedis jedis = jedisPool.getResource()) {
             jedis.auth(redisPassword);
 
-            while (!readyToSend.isEmpty()) {
-                DataPacket message = readyToSend.remove();
+            while (!readyToSendBatch.isEmpty()) {
+                DataPacket message = readyToSendBatch.remove();
                 String messageString = message.toString();
 
                 if (messageString == null)
                     continue;
 
                 String keyPrefix = getSendPacketsKeyPrefix();
+
                 if (message.getReceivers().isPresent()) {
-                    message.getReceivers().get()
-                            .forEach(receiver -> jedis.rpush(keyPrefix + receiver, messageString));
+                    message.getReceivers().get().forEach(receiver -> jedis.rpush(keyPrefix + receiver, messageString));
                 } else {
                     SERVERS.stream()
                             .filter(serverId -> !serverId.equalsIgnoreCase(SERVER_ID))
