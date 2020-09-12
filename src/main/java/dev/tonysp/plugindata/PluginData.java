@@ -43,8 +43,8 @@ public class PluginData extends JavaPlugin {
         int redisPort = getConfig().getInt("redis.port", 6379);
         String redisPassword = getConfig().getString("redis.password", "");
 
-        int packetSendAndRetrieveInterval = getConfig().getInt("packet-send-and-retrieve-interval", 5);
-        boolean clearOldPackets = getConfig().getBoolean("clear-old-packets", true);
+        int packetSendAndRetrieveInterval = getConfig().getInt("batch-packet-send-and-retrieve-interval", 5);
+        boolean clearOldPackets = getConfig().getBoolean("batch-clear-old-packets", true);
 
         if (clusterId != null && serverId != null) {
             dataPacketManager = new DataPacketManager(getInstance(), redisIp, redisPort, redisPassword, clusterId, serverId, packetSendAndRetrieveInterval, clearOldPackets);

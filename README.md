@@ -23,11 +23,16 @@ BasicDataPacket.newBuilder("my plugin")
 In this example, the id of the application is "my plugin", the contents are one String and Integer and the packed would be received by "server 2".
 If you want to send the packet to every server, you can omit the addReceiver method.
 
-To receive all DataPackets which were sent to you, you can do the following:
+When you receive DataPacket, the event DataPacketReceivePubSubEvent will be called asynchronously.
+
+#### Batch packet sending
+You can use the batch option to send packets. The packets send and received with this option will be processed on a defined interval (batch-packet-send-and-retrieve-interval in config). To send a packet with the batch option, pass it to the send() method.
+To receive all DataPackets which were sent to you with the batch option, you can do the following:
 ```java
 DataPacketManager.getInstance().getReceivedPackets("my plugin");
 ```
 Or you can specify which packets you want to process like this:
 ```java
 DataPacketManager.getInstance().getReceivedPackets("my plugin", TestDataPacket.class);
+```
 ```
