@@ -27,12 +27,12 @@ public class BasicDataPacket extends DataPacket {
         private boolean bool2;
         private LocalDateTime dateTime;
 
-        private ArrayList<String> stringList = new ArrayList<>();
-        private HashMap<String, String> stringData = new HashMap<>();
-        private HashMap<String, Integer> intData = new HashMap<>();
-        private HashMap<String, Double> doubleData = new HashMap<>();
-        private HashMap<String, UUID> uuidData = new HashMap<>();
-        private HashMap<UUID, String> uuidDataInverted = new HashMap<>();
+        private List<String> stringList = new ArrayList<>();
+        private Map<String, String> stringData = new HashMap<>();
+        private Map<String, Integer> intData = new HashMap<>();
+        private Map<String, Double> doubleData = new HashMap<>();
+        private Map<String, UUID> uuidData = new HashMap<>();
+        private Map<UUID, String> uuidDataInverted = new HashMap<>();
 
         public Builder (String applicationId) {
             this.applicationId = applicationId;
@@ -110,7 +110,7 @@ public class BasicDataPacket extends DataPacket {
             return this;
         }
 
-        public Builder stringList (ArrayList<String> stringList) {
+        public Builder stringList (List<String> stringList) {
             this.stringList = stringList;
             return this;
         }
@@ -125,27 +125,27 @@ public class BasicDataPacket extends DataPacket {
             return this;
         }
 
-        public Builder stringData (HashMap<String, String> stringData) {
+        public Builder stringData (Map<String, String> stringData) {
             this.stringData = stringData;
             return this;
         }
 
-        public Builder intData (HashMap<String, Integer> intData) {
+        public Builder intData (Map<String, Integer> intData) {
             this.intData = intData;
             return this;
         }
 
-        public Builder doubleData (HashMap<String, Double> doubleData) {
+        public Builder doubleData (Map<String, Double> doubleData) {
             this.doubleData = doubleData;
             return this;
         }
 
-        public Builder uuidData (HashMap<String, UUID> uuidData) {
+        public Builder uuidData (Map<String, UUID> uuidData) {
             this.uuidData = uuidData;
             return this;
         }
 
-        public Builder uuidDataInverted (HashMap<UUID, String> uuidDataInverted) {
+        public Builder uuidDataInverted (Map<UUID, String> uuidDataInverted) {
             this.uuidDataInverted = uuidDataInverted;
             return this;
         }
@@ -162,12 +162,12 @@ public class BasicDataPacket extends DataPacket {
     private final boolean bool2;
     private final LocalDateTime dateTime;
 
-    private final ArrayList<String> stringList;
-    private final HashMap<String, String> stringData;
-    private final HashMap<String, Integer> intData;
-    private final HashMap<String, Double> doubleData;
-    private final HashMap<String, UUID> uuidData;
-    private final HashMap<UUID, String> uuidDataInverted;
+    private final List<String> stringList;
+    private final Map<String, String> stringData;
+    private final Map<String, Integer> intData;
+    private final Map<String, Double> doubleData;
+    private final Map<String, UUID> uuidData;
+    private final Map<UUID, String> uuidDataInverted;
 
     private BasicDataPacket (
             String applicationId,
@@ -183,12 +183,12 @@ public class BasicDataPacket extends DataPacket {
             boolean bool,
             boolean bool2,
             LocalDateTime dateTime,
-            ArrayList<String> stringList,
-            HashMap<String, String> stringData,
-            HashMap<String, Integer> intData,
-            HashMap<String, Double> doubleData,
-            HashMap<String, UUID> uuidData,
-            HashMap<UUID, String> uuidDataInverted
+            List<String> stringList,
+            Map<String, String> stringData,
+            Map<String, Integer> intData,
+            Map<String, Double> doubleData,
+            Map<String, UUID> uuidData,
+            Map<UUID, String> uuidDataInverted
     ) {
         super(applicationId, receivers);
         this.setSender(sender);
@@ -214,11 +214,11 @@ public class BasicDataPacket extends DataPacket {
         return dateTime;
     }
 
-    public ArrayList<String> getStringList () {
+    public List<String> getStringList () {
         return stringList;
     }
 
-    public HashMap<UUID, String> getUuidDataInverted() {
+    public Map<UUID, String> getUuidDataInverted() {
         return uuidDataInverted;
     }
 
@@ -234,7 +234,7 @@ public class BasicDataPacket extends DataPacket {
         return string;
     }
 
-    public HashMap<String, UUID> getUuidData() {
+    public Map<String, UUID> getUuidData() {
         return uuidData;
     }
 
@@ -258,15 +258,15 @@ public class BasicDataPacket extends DataPacket {
         return action;
     }
 
-    public HashMap<String, String> getStringData() {
+    public Map<String, String> getStringData() {
         return stringData;
     }
 
-    public HashMap<String, Integer> getIntData() {
+    public Map<String, Integer> getIntData() {
         return intData;
     }
 
-    public HashMap<String, Double> getDoubleData() {
+    public Map<String, Double> getDoubleData() {
         return doubleData;
     }
 

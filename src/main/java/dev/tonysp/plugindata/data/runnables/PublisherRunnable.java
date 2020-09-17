@@ -2,8 +2,11 @@ package dev.tonysp.plugindata.data.runnables;
 
 import dev.tonysp.plugindata.data.DataPacketManager;
 import dev.tonysp.plugindata.data.packets.DataPacket;
+import dev.tonysp.plugindata.data.pipelines.jedis.PubSubPipelineManager;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
+
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class PublisherRunnable implements Runnable {
 
@@ -21,7 +24,7 @@ public class PublisherRunnable implements Runnable {
             jedis.auth(redisPassword);
 
             while (true) {
-                DataPacket message = DataPacketManager.getInstance().getReadyToSendPubSub().take();
+                DataPacket message = ((LinkedBlockingQueue<DataPacket>) PubSubPipelineManager.getInstance().getReadyToSend()).take();
                 String messageString = message.toString();
 
                 if (messageString == null)
