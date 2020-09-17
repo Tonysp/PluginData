@@ -1,19 +1,16 @@
 package dev.tonysp.plugindata.data;
 
-import co.aikar.taskchain.BukkitTaskChainFactory;
-import co.aikar.taskchain.TaskChain;
-import co.aikar.taskchain.TaskChainFactory;
 import dev.tonysp.plugindata.PluginData;
-import dev.tonysp.plugindata.data.events.DataPacketReceivePubSubEvent;
-import dev.tonysp.plugindata.data.packets.DataPacket;
-import dev.tonysp.plugindata.data.runnables.PublisherRunnable;
-import dev.tonysp.plugindata.data.runnables.SubscriberRunnable;
-import org.bukkit.Bukkit;
+import dev.tonysp.plugindata.data.exceptions.WrongPipelineManagerException;
+import dev.tonysp.plugindata.data.pipelines.Pipeline;
+import dev.tonysp.plugindata.data.pipelines.PipelineManager;
+import dev.tonysp.plugindata.data.pipelines.jedis.BatchPipelineManager;
+import dev.tonysp.plugindata.data.pipelines.jedis.PubSubPipelineManager;
+import dev.tonysp.plugindata.data.pipelines.jedis.RedisPipelineManager;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 import redis.clients.jedis.*;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -23,31 +20,20 @@ public class DataPacketManager {
 
     private final String redisIp, redisPassword;
     private final int redisPort;
-    private JedisPool jedisPool;
     private boolean isConnected = false;
+    private JedisPool jedisPool;
 
     private final BukkitTask reconnectTask, scanServersTask;
-    private TaskChainFactory taskChainFactory;
-    private boolean sendAndReceivePackets = true;
-
-    private Thread publisherThread;
-    private Thread subscriberThread;
-    private JedisPubSub jedisPubSub;
 
     public final String CLUSTER_ID;
     public final String SERVER_ID;
     public final Set<String> SERVERS;
     public final String GLOBAL_KEY_PREFIX = "plugindata";
     private final int RECONNECT_TICKS = 1200;
-    private final int PACKET_SEND_AND_RETRIEVE_INTERVAL;
-    private final boolean CLEAR_OLD_PACKETS;
-    public int PACKETS_PER_QUERY = 1000;
 
-    private final HashMap<String, ConcurrentLinkedQueue<DataPacket>> received = new HashMap<>();
-    private final ConcurrentLinkedQueue<DataPacket> readyToSendBatch = new ConcurrentLinkedQueue<>();
-    private final LinkedBlockingQueue<DataPacket> readyToSendPubSub = new LinkedBlockingQueue<>();
+    private final List<PipelineManager> pipelineManagers = new ArrayList<>();
 
-    public DataPacketManager (PluginData plugin, String redisIp, int redisPort, String redisPassword, String CLUSTER_ID, String SERVER_ID, int PACKET_SEND_AND_RETRIEVE_INTERVAL, boolean CLEAR_OLD_PACKETS) {
+    public DataPacketManager (PluginData plugin, String redisIp, int redisPort, String redisPassword, String CLUSTER_ID, String SERVER_ID, int packet_send_and_retrieve_interval, boolean clear_old_packets) {
         instance = this;
         this.redisPassword = redisPassword;
         this.redisIp = redisIp;
@@ -56,10 +42,9 @@ public class DataPacketManager {
         this.CLUSTER_ID = CLUSTER_ID;
         this.SERVER_ID = SERVER_ID;
         this.SERVERS = Collections.newSetFromMap(new ConcurrentHashMap<>());
-        this.PACKET_SEND_AND_RETRIEVE_INTERVAL = PACKET_SEND_AND_RETRIEVE_INTERVAL;
-        this.CLEAR_OLD_PACKETS = CLEAR_OLD_PACKETS;
 
-        taskChainFactory = BukkitTaskChainFactory.create(plugin);
+        registerPipelineManager(new BatchPipelineManager(redisPassword, clear_old_packets, packet_send_and_retrieve_interval));
+        registerPipelineManager(new PubSubPipelineManager(redisPassword));
 
         reconnectTask = new BukkitRunnable() {
             @Override
@@ -67,7 +52,7 @@ public class DataPacketManager {
                 isConnected = connect();
 
                 if (isConnected) {
-                    startPacketStream();
+                    startUp();
                     this.cancel();
                 }
             }
@@ -87,52 +72,36 @@ public class DataPacketManager {
         return instance;
     }
 
-    public LinkedBlockingQueue<DataPacket> getReadyToSendPubSub () {
-        return readyToSendPubSub;
+    public void registerPipelineManager (PipelineManager pipelineManager) {
+        Pipeline.getPipelineByManager(pipelineManager.getClass()).ifPresent(pipeline -> {
+            try {
+                pipeline.setPipelineManagerObject(pipelineManager);
+            } catch (WrongPipelineManagerException exception) {
+                exception.printStackTrace();
+            }
+        });
+        getPipelineManagers().add(pipelineManager);
     }
 
-    private void startPacketStream () {
-        registerServer();
-        if (getInstance().CLEAR_OLD_PACKETS) {
-            clearPackets();
-        }
-        startSubscriber();
-        startPublisher();
+    public List<PipelineManager> getPipelineManagers () {
+        return pipelineManagers;
+    }
 
-        Bukkit.getServer().getScheduler().runTaskTimer(PluginData.getInstance(), () -> {
-            if (!sendAndReceivePackets) {
-                return;
-            }
-            sendAndReceivePackets = false;
-            newChain()
-              .asyncLast(task -> sendPackets())
-              .asyncLast(task -> receivePackets())
-              .delay(PACKET_SEND_AND_RETRIEVE_INTERVAL * 50, TimeUnit.MILLISECONDS)
-              .asyncLast(task -> sendAndReceivePackets = true)
-              .execute();
-        }, 0L, 1L);
+    private void startUp () {
+        getPipelineManagers().stream()
+                .filter(pipelineManager -> pipelineManager instanceof RedisPipelineManager)
+                .forEach(pipelineManager -> ((RedisPipelineManager) pipelineManager).setJedisPool(jedisPool));
+        getPipelineManagers().forEach(PipelineManager::startUp);
+
+        registerServer();
     }
 
     public void shutDown () {
+        getPipelineManagers().forEach(PipelineManager::shutDown);
+
         reconnectTask.cancel();
         scanServersTask.cancel();
         unregisterServer();
-        jedisPubSub.unsubscribe();
-        if (subscriberThread != null) {
-            try {
-                subscriberThread.join();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-        if (publisherThread != null) {
-            publisherThread.interrupt();
-            try {
-                publisherThread.join();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
     }
 
     public String getReceivePacketsKey () {
@@ -147,12 +116,8 @@ public class DataPacketManager {
         return GLOBAL_KEY_PREFIX + "-" + CLUSTER_ID + "-servers";
     }
 
-    private String getDataPacketKeyFromClass (String applicationId, Class<?> dataPacketClass) {
+    public String getDataPacketKeyFromClass (String applicationId, Class<?> dataPacketClass) {
         return applicationId.concat("-").concat(dataPacketClass.getName());
-    }
-
-    public <T> TaskChain<T> newChain() {
-        return taskChainFactory.newChain();
     }
 
     private boolean connect () {
@@ -197,148 +162,6 @@ public class DataPacketManager {
 
             SERVERS.clear();
             SERVERS.addAll(jedis.smembers(getClusterServersSetKey()));
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    public <T> LinkedList<T> getReceivedPackets (String applicationId, Class<T> dataPacketClass) {
-        String key = getDataPacketKeyFromClass(applicationId, dataPacketClass);
-        if (!received.containsKey(key)) {
-            ConcurrentLinkedQueue<DataPacket> dataPackets = new ConcurrentLinkedQueue<>();
-            received.put(key, dataPackets);
-            return new LinkedList<>();
-        }
-
-        LinkedList<T> dataPackets = new LinkedList<>();
-        DataPacket dataPacket = received.get(key).poll();
-        while (dataPacket != null) {
-            dataPackets.add((T) dataPacket);
-            dataPacket = received.get(key).poll();
-        }
-        return dataPackets;
-    }
-
-    public LinkedList<? extends DataPacket> getReceivedPackets (String applicationId) {
-        LinkedList<DataPacket> dataPackets = new LinkedList<>();
-        received.entrySet().stream()
-                .filter(entry -> entry.getKey().startsWith(applicationId))
-                .forEach(entry -> {
-            DataPacket dataPacket = entry.getValue().poll();
-            while (dataPacket != null) {
-                dataPackets.add(dataPacket);
-                dataPacket = entry.getValue().poll();
-            }
-        });
-
-        return dataPackets;
-    }
-
-    public void sendPacket (DataPacket dataPacket) {
-        if (dataPacket.getPipeline() == Pipeline.BATCH) {
-            readyToSendBatch.add(dataPacket);
-        } else {
-            readyToSendPubSub.add(dataPacket);
-        }
-    }
-
-    private void clearPackets () {
-        try (Jedis jedis = jedisPool.getResource()) {
-            jedis.auth(redisPassword);
-
-            jedis.del(getReceivePacketsKey());
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void receivePackets () {
-        List<String> stringList = new ArrayList<>();
-        try (Jedis jedis = jedisPool.getResource()) {
-            jedis.auth(redisPassword);
-
-            String key = getReceivePacketsKey();
-            Transaction transaction = jedis.multi();
-            Response<List<String>> response = transaction.lrange(key, 0, PACKETS_PER_QUERY);
-            transaction.del(key);
-            transaction.exec();
-            stringList = response.get();
-            if (stringList.size() == 0) {
-                return;
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        for (String messageString : stringList) {
-            try {
-                DataPacket dataPacket = DataPacket.fromString(messageString);
-                String key = getDataPacketKeyFromClass(dataPacket.getApplicationId(), dataPacket.getClass());
-                if (received.containsKey(key)) {
-                    received.get(key).add(dataPacket);
-                } else {
-                    ConcurrentLinkedQueue<DataPacket> packetQueue = new ConcurrentLinkedQueue<>();
-                    packetQueue.add(dataPacket);
-                    received.put(key, packetQueue);
-                }
-            } catch (IOException | ClassNotFoundException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    private void startPublisher () {
-        PublisherRunnable publisherRunnable = new PublisherRunnable(jedisPool, redisPassword);
-        publisherThread = new Thread(publisherRunnable);
-        publisherThread.start();
-    }
-
-    public JedisPubSub startSubscriber () {
-        jedisPubSub = new JedisPubSub() {
-            @Override
-            public void onMessage(String channel, String messageString) {
-                try {
-                    DataPacket dataPacket = DataPacket.fromString(messageString);
-                    DataPacketReceivePubSubEvent event = new DataPacketReceivePubSubEvent(true, dataPacket);
-                    Bukkit.getPluginManager().callEvent(event);
-                } catch (IOException | ClassNotFoundException e) {
-                    e.printStackTrace();
-                }
-            }
-        };
-
-        SubscriberRunnable subscriberRunnable = new SubscriberRunnable(jedisPool, redisPassword, jedisPubSub);
-        subscriberThread = new Thread(subscriberRunnable);
-        subscriberThread.start();
-
-        return jedisPubSub;
-    }
-
-    private void sendPackets () {
-        if (readyToSendBatch.isEmpty()) {
-            return;
-        }
-
-        try (Jedis jedis = jedisPool.getResource()) {
-            jedis.auth(redisPassword);
-
-            while (!readyToSendBatch.isEmpty()) {
-                DataPacket message = readyToSendBatch.remove();
-                String messageString = message.toString();
-
-                if (messageString == null)
-                    continue;
-
-                String keyPrefix = getSendPacketsKeyPrefix();
-
-                if (message.getReceivers().isPresent()) {
-                    message.getReceivers().get().forEach(receiver -> jedis.rpush(keyPrefix + receiver, messageString));
-                } else {
-                    SERVERS.stream()
-                            .filter(serverId -> !serverId.equalsIgnoreCase(SERVER_ID))
-                            .forEach(receiver -> jedis.rpush(keyPrefix + receiver, messageString));
-                }
-            }
         } catch (Exception e) {
             e.printStackTrace();
         }

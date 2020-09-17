@@ -1,6 +1,7 @@
 package dev.tonysp.plugindata.data.packets;
 
 import java.util.HashSet;
+import java.util.Set;
 
 public class StringDataPacket extends DataPacket {
 
@@ -11,7 +12,7 @@ public class StringDataPacket extends DataPacket {
     public static class Builder {
 
         private final String applicationId;
-        private HashSet<String> receivers;
+        private Set<String> receivers;
         private String string;
 
         public Builder (String applicationId) {
@@ -38,7 +39,7 @@ public class StringDataPacket extends DataPacket {
 
     private final String string;
 
-    public StringDataPacket (String applicationId, HashSet<String> receivers, String string) {
+    public StringDataPacket (String applicationId, Set<String> receivers, String string) {
         super(applicationId, receivers);
         this.string = string;
     }
