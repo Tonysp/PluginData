@@ -29,10 +29,10 @@ When you receive DataPacket, the event DataPacketReceivePubSubEvent will be call
 You can use the batch option to send packets. The packets send and received with this option will be processed on a defined interval (batch-packet-send-and-retrieve-interval in config). To send a packet with the batch option, pass it to the send() method.
 To receive all DataPackets which were sent to you with the batch option, you can do the following:
 ```java
-DataPacketManager.getInstance().getReceivedPackets("my plugin");
+BatchPipelineManager.getInstance().getReceivedPackets("my plugin");
 ```
 Or you can specify which packets you want to process like this:
 ```java
-DataPacketManager.getInstance().getReceivedPackets("my plugin", TestDataPacket.class);
+BatchPipelineManager.getInstance().getReceivedPackets("my plugin", TestDataPacket.class);
 ```
 ```
