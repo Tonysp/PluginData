@@ -35,4 +35,3 @@ Or you can specify which packets you want to process like this:
 ```java
 BatchPipelineManager.getInstance().getReceivedPackets("my plugin", TestDataPacket.class);
 ```
-```
