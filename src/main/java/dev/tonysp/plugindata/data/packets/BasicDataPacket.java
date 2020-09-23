@@ -16,7 +16,6 @@ public class BasicDataPacket extends DataPacket {
         private final String applicationId;
         private HashSet<String> receivers;
 
-        private String action;
         private int integer;
         private int integer2;
         private long longValue;
@@ -43,7 +42,6 @@ public class BasicDataPacket extends DataPacket {
                     applicationId,
                     DataPacketManager.getInstance().SERVER_ID,
                     receivers,
-                    action,
                     integer,
                     integer2,
                     longValue,
@@ -72,11 +70,6 @@ public class BasicDataPacket extends DataPacket {
 
         public Builder dateTime (LocalDateTime dateTime) {
             this.dateTime = dateTime;
-            return this;
-        }
-
-        public Builder action (String action) {
-            this.action = action;
             return this;
         }
 
@@ -151,7 +144,6 @@ public class BasicDataPacket extends DataPacket {
         }
     }
 
-    private final String action;
     private final int integer;
     private final int integer2;
     private final long longValue;
@@ -173,7 +165,6 @@ public class BasicDataPacket extends DataPacket {
             String applicationId,
             String sender,
             HashSet<String> receivers,
-            String action,
             int integer,
             int integer2,
             long longValue,
@@ -192,7 +183,6 @@ public class BasicDataPacket extends DataPacket {
     ) {
         super(applicationId, receivers);
         this.setSender(sender);
-        this.action = action;
         this.integer = integer;
         this.integer2 = integer2;
         this.longValue = longValue;
@@ -252,10 +242,6 @@ public class BasicDataPacket extends DataPacket {
 
     public double getDouble() {
         return doubleValue;
-    }
-
-    public String getAction() {
-        return action;
     }
 
     public Map<String, String> getStringData() {
