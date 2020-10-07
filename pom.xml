@@ -6,7 +6,7 @@
 
     <groupId>dev.tonysp</groupId>
     <artifactId>PluginData</artifactId>
-    <version>1.4.1</version>
+    <version>1.4.2</version>
 
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
@@ -112,8 +112,8 @@
                             <shadedPattern>dev.tonysp.plugindata.shaded.co.aikar</shadedPattern>
                         </relocation>
                         <relocation>
-                            <pattern>org</pattern>
-                            <shadedPattern>dev.tonysp.plugindata.shaded.org</shadedPattern>
+                            <pattern>org.postgresql</pattern>
+                            <shadedPattern>dev.tonysp.plugindata.shaded.org.postgresql</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>redis</pattern>
