@@ -18,8 +18,8 @@ batch-clear-old-packets: true
 # - redis connection details, this optional, but needed for the data packet functionality
 redis:
   ip: '127.0.0.1'
-  port: 123
-  password: 'password'
+  port: 6379
+  password: ''
 
 # mysql-connections
 # - define as many connections as you want

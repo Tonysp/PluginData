@@ -6,7 +6,7 @@
 
     <groupId>dev.tonysp</groupId>
     <artifactId>PluginData</artifactId>
-    <version>1.4.3</version>
+    <version>1.4.4</version>
 
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
