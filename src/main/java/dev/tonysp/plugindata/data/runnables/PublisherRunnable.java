@@ -22,7 +22,7 @@ public class PublisherRunnable implements Runnable {
     public void run() {
         try (Jedis jedis = jedisPool.getResource()) {
             jedis.auth(redisPassword);
-            Thread.sleep(500);
+            Thread.sleep(2000);
 
             while (true) {
                 DataPacket message = ((LinkedBlockingQueue<DataPacket>) PubSubPipelineManager.getInstance().getReadyToSend()).take();
