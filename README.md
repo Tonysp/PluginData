@@ -1,5 +1,5 @@
 # PluginData
-Bukkit library for easy database connection management and sending data between plugins.
+Bukkit library for easy database connection management and sending data between server instances.
 
 ### Database connection manager
 1. Set up any number of MySQL databases in the config.yml
