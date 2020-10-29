@@ -1,6 +1,6 @@
 package dev.tonysp.plugindata.data.pipelines.jedis;
 
-import dev.tonysp.plugindata.data.events.DataPacketReceivePubSubEvent;
+import dev.tonysp.plugindata.data.events.DataPacketReceiveEvent;
 import dev.tonysp.plugindata.data.packets.DataPacket;
 import dev.tonysp.plugindata.data.runnables.PublisherRunnable;
 import dev.tonysp.plugindata.data.runnables.SubscriberRunnable;
@@ -66,7 +66,7 @@ public class PubSubPipelineManager extends RedisPipelineManager {
             public void onMessage(String channel, String messageString) {
                 try {
                     DataPacket dataPacket = DataPacket.fromString(messageString);
-                    DataPacketReceivePubSubEvent event = new DataPacketReceivePubSubEvent(true, dataPacket);
+                    DataPacketReceiveEvent event = new DataPacketReceiveEvent(true, dataPacket);
                     Bukkit.getPluginManager().callEvent(event);
                 } catch (IOException | ClassNotFoundException e) {
                     e.printStackTrace();

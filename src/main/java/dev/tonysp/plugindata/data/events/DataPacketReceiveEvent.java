@@ -4,17 +4,17 @@ import dev.tonysp.plugindata.data.packets.DataPacket;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
-public class DataPacketReceivePubSubEvent extends Event {
+public class DataPacketReceiveEvent extends Event {
     private static final HandlerList handlers = new HandlerList();
 
     private DataPacket dataPacket;
 
-    public DataPacketReceivePubSubEvent (boolean isAsync, DataPacket dataPacket) {
+    public DataPacketReceiveEvent (boolean isAsync, DataPacket dataPacket) {
         super(isAsync);
         this.dataPacket = dataPacket;
     }
 
-    public DataPacketReceivePubSubEvent(DataPacket dataPacket) {
+    public DataPacketReceiveEvent (DataPacket dataPacket) {
         this.dataPacket = dataPacket;
     }
 

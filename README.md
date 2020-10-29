@@ -1,5 +1,5 @@
 # PluginData
-Bukkit plugin for easy database connection management and sending data between plugins.
+Bukkit library for easy database connection management and sending data between server instances.
 
 ### Database connection manager
 1. Set up any number of MySQL databases in the config.yml
@@ -29,10 +29,19 @@ When you receive DataPacket, the event DataPacketReceivePubSubEvent will be call
 You can use the batch option to send packets. The packets send and received with this option will be processed on a defined interval (batch-packet-send-and-retrieve-interval in config). To send a packet with the batch option, pass it to the send() method.
 To receive all DataPackets which were sent to you with the batch option, you can do the following:
 ```java
-DataPacketManager.getInstance().getReceivedPackets("my plugin");
+BatchPipelineManager.getInstance().getReceivedPackets("my plugin");
 ```
 Or you can specify which packets you want to process like this:
 ```java
-DataPacketManager.getInstance().getReceivedPackets("my plugin", TestDataPacket.class);
+BatchPipelineManager.getInstance().getReceivedPackets("my plugin", TestDataPacket.class);
 ```
-```
+
+
+### License
+Copyright (C) 2020 Antonín Sůva
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>. 

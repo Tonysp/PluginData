@@ -29,24 +29,27 @@ public class PluginData extends JavaPlugin {
 
         log("Loading database connections...");
 
-        String clusterId = getConfig().getString("cluster-id");
-        if (clusterId == null) {
+        boolean enableDataPacket = true;
+        String clusterId = getConfig().getString("cluster-id", null);
+        if (clusterId == null || clusterId.equalsIgnoreCase("")) {
             log("Missing cluster-id, data packet functionality disabled");
+            enableDataPacket = false;
         }
 
-        String serverId = getConfig().getString("server-id");
-        if (serverId == null) {
+        String serverId = getConfig().getString("server-id", null);
+        if (serverId == null || serverId.equalsIgnoreCase("")) {
             log("Missing server-id, data packet functionality disabled");
+            enableDataPacket = false;
         }
 
-        String redisIp = getConfig().getString("redis.ip", "localhost");
+        String redisIp = getConfig().getString("redis.ip", "127.0.0.1");
         int redisPort = getConfig().getInt("redis.port", 6379);
         String redisPassword = getConfig().getString("redis.password", "");
 
         int packetSendAndRetrieveInterval = getConfig().getInt("batch-packet-send-and-retrieve-interval", 5);
         boolean clearOldPackets = getConfig().getBoolean("batch-clear-old-packets", true);
 
-        if (clusterId != null && serverId != null) {
+        if (enableDataPacket) {
             dataPacketManager = new DataPacketManager(getInstance(), redisIp, redisPort, redisPassword, clusterId, serverId, packetSendAndRetrieveInterval, clearOldPackets);
         }
         databaseManager = new DatabaseManager(getConfig());
