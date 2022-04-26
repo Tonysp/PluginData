@@ -1,34 +1,32 @@
-# cluster-id
-# - defines name of the cluster of servers that can communicate with each other, can be left default
-cluster-id: "cluster0"
-
-# server-id
-# - unique identifier of this server, which will be part of the cluster (cluster-id)
-server-id: "serverOne"
-
-# batch-packet-retrieve-interval
-# - interval in ticks to send and retrieve data packets with the batch option, setting this below 5 ticks is not recommended
-batch-packet-send-and-retrieve-interval: 5
-
-# batch-clear-old-packets
-# - if the server should discard old packets that were sent with the batch option when it was offline
-batch-clear-old-packets: true
-
-# redis
-# - redis connection details, this optional, but needed for the data packet functionality
-redis:
-  ip: '127.0.0.1'
-  port: 6379
-  password: ''
-
-# mysql-connections
+# connections
 # - define as many connections as you want
-mysql-connections:
-  global:
+# - types: REDIS, MYSQL
+connections:
+  redis-connection:
+    type: REDIS
+    ip: '127.0.0.1'
+    port: 6379
+    password: ''
+  mysql-global:
+    type: MYSQL
     url: jdbc:mysql://localhost:3306/database
     username: username
     password: password
-  local:
-    url: jdbc:mysql://localhost:3306/database
+  mysql-local:
+    type: MYSQL
+    url: jdbc:mysql://localhost:3306/another_database
     username: username
     password: password
+
+data-packets:
+  enabled: false
+  redis-connection-name: redis-connection
+  # cluster-id - defines name of the cluster of servers that can communicate with each other, can be left default
+  cluster-id: "cluster0"
+  # server-id - unique identifier of this server, which will be part of the cluster (cluster-id)
+  server-id: "serverOne"
+  # batch-packet-retrieve-interval - interval in ticks to send and retrieve data packets with the batch option,
+  # setting this below 5 ticks is not recommended
+  batch-packet-send-and-retrieve-interval: 5
+  # batch-clear-old-packets - if the server should discard old packets that were sent with the batch option when it was offline
+  batch-clear-old-packets: true

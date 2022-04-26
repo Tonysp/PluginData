@@ -1,11 +1,11 @@
 # PluginData
-Bukkit library for easy database connection management and sending data between server instances.
+Bukkit library for easy mysqlConnection connection management and sending data between server instances.
 
 ### Database connection manager
 1. Set up any number of MySQL databases in the config.yml
 2. Get connection using the getConnection() method (thread safe).
 ```java
-DatabaseManager.getInstance().getConnection("name in config");
+MysqlConnection.byName("name in config");
 ```
 
 ### DataPacket API for sending data between servers

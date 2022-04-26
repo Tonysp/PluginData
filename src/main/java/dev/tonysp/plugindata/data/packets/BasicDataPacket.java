@@ -1,7 +1,5 @@
 package dev.tonysp.plugindata.data.packets;
 
-import dev.tonysp.plugindata.data.DataPacketManager;
-
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -40,7 +38,6 @@ public class BasicDataPacket extends DataPacket {
         public BasicDataPacket buildPacket () {
             return new BasicDataPacket(
                     applicationId,
-                    DataPacketManager.getInstance().SERVER_ID,
                     receivers,
                     integer,
                     integer2,
@@ -163,7 +160,6 @@ public class BasicDataPacket extends DataPacket {
 
     private BasicDataPacket (
             String applicationId,
-            String sender,
             HashSet<String> receivers,
             int integer,
             int integer2,
@@ -182,7 +178,6 @@ public class BasicDataPacket extends DataPacket {
             Map<UUID, String> uuidDataInverted
     ) {
         super(applicationId, receivers);
-        this.setSender(sender);
         this.integer = integer;
         this.integer2 = integer2;
         this.longValue = longValue;
