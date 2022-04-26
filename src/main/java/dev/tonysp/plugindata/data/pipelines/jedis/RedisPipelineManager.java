@@ -1,21 +1,22 @@
 package dev.tonysp.plugindata.data.pipelines.jedis;
 
+import dev.tonysp.plugindata.connections.redis.RedisConnection;
+import dev.tonysp.plugindata.data.DataPacketManager;
 import dev.tonysp.plugindata.data.packets.DataPacket;
 import dev.tonysp.plugindata.data.pipelines.PipelineManager;
-import redis.clients.jedis.JedisPool;
 
 import java.util.AbstractQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public abstract class RedisPipelineManager implements PipelineManager {
 
-    protected JedisPool jedisPool;
-    protected final String redisPassword;
-
+    protected final RedisConnection redisConnection;
+    protected final DataPacketManager dataPacketManager;
     AbstractQueue<DataPacket> readyToSend;
 
-    protected RedisPipelineManager (String redisPassword) {
-        this.redisPassword = redisPassword;
+    protected RedisPipelineManager (RedisConnection redisConnection, DataPacketManager dataPacketManager) {
+        this.redisConnection = redisConnection;
+        this.dataPacketManager = dataPacketManager;
         this.readyToSend = new LinkedBlockingQueue<>();
     }
 
@@ -26,9 +27,5 @@ public abstract class RedisPipelineManager implements PipelineManager {
     @Override
     public void sendPacket (DataPacket dataPacket) {
         readyToSend.add(dataPacket);
-    }
-
-    public void setJedisPool (JedisPool jedisPool) {
-        this.jedisPool = jedisPool;
     }
 }

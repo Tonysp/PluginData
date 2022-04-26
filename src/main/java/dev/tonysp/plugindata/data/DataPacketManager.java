@@ -1,12 +1,13 @@
 package dev.tonysp.plugindata.data;
 
 import dev.tonysp.plugindata.PluginData;
+import dev.tonysp.plugindata.connections.redis.RedisConnection;
 import dev.tonysp.plugindata.data.exceptions.WrongPipelineManagerException;
 import dev.tonysp.plugindata.data.pipelines.Pipeline;
 import dev.tonysp.plugindata.data.pipelines.PipelineManager;
 import dev.tonysp.plugindata.data.pipelines.jedis.BatchPipelineManager;
 import dev.tonysp.plugindata.data.pipelines.jedis.PubSubPipelineManager;
-import dev.tonysp.plugindata.data.pipelines.jedis.RedisPipelineManager;
+import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 import redis.clients.jedis.*;
@@ -16,92 +17,91 @@ import java.util.concurrent.*;
 
 public class DataPacketManager {
 
-    private static DataPacketManager instance;
+    private final JavaPlugin plugin;
+    private final RedisConnection redisConnection;
+    private final BukkitTask startupTask;
 
-    private final String redisIp, redisPassword;
-    private final int redisPort;
-    private boolean isConnected = false;
-    private JedisPool jedisPool;
-
-    private final BukkitTask reconnectTask, scanServersTask;
+    private boolean running = false;
+    private BukkitTask scanServersTask;
 
     public final String CLUSTER_ID;
     public final String SERVER_ID;
     public final Set<String> SERVERS;
     public final String GLOBAL_KEY_PREFIX = "plugindata";
-    private final int RECONNECT_TICKS = 1200;
 
-    private final List<PipelineManager> pipelineManagers = new ArrayList<>();
+    public static final int DEFAULT_PACKET_SEND_RECEIVE_INTERVAL = 5;
+    public static final boolean DEFAULT_CLEAR_OLD_PACKETS = true;
 
-    public DataPacketManager (PluginData plugin, String redisIp, int redisPort, String redisPassword, String CLUSTER_ID, String SERVER_ID, int packet_send_and_retrieve_interval, boolean clear_old_packets) {
-        instance = this;
-        this.redisPassword = redisPassword;
-        this.redisIp = redisIp;
-        this.redisPort = redisPort;
+    private final Map<Pipeline, PipelineManager> pipelineManagers = new HashMap<>();
+
+    public DataPacketManager (JavaPlugin plugin, RedisConnection redisConnection, String CLUSTER_ID, String SERVER_ID, int packet_send_and_retrieve_interval, boolean clear_old_packets) {
+        this.plugin = plugin;
+        this.redisConnection = redisConnection;
 
         this.CLUSTER_ID = CLUSTER_ID;
         this.SERVER_ID = SERVER_ID;
         this.SERVERS = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
-        registerPipelineManager(new BatchPipelineManager(redisPassword, clear_old_packets, packet_send_and_retrieve_interval));
-        registerPipelineManager(new PubSubPipelineManager(redisPassword));
+        registerPipelineManager(new BatchPipelineManager(plugin, redisConnection, this, clear_old_packets, packet_send_and_retrieve_interval));
+        registerPipelineManager(new PubSubPipelineManager(redisConnection, this));
 
-        reconnectTask = new BukkitRunnable() {
+        startupTask = new BukkitRunnable() {
             @Override
             public void run() {
-                isConnected = connect();
-
-                if (isConnected) {
+                if (redisConnection.isConnected() && !running) {
                     startUp();
-                    this.cancel();
                 }
-            }
-        }.runTaskTimer(plugin, 0, RECONNECT_TICKS);
-
-        scanServersTask = new BukkitRunnable() {
-            @Override
-            public void run() {
-                if (isConnected) {
-                    scanServers();
+                if (!redisConnection.isConnected() && running) {
+                    shutDown(false);
                 }
             }
         }.runTaskTimer(plugin, 0, 40);
     }
 
-    public static DataPacketManager getInstance () {
-        return instance;
-    }
-
     public void registerPipelineManager (PipelineManager pipelineManager) {
-        Pipeline.getPipelineByManager(pipelineManager.getClass()).ifPresent(pipeline -> {
-            try {
-                pipeline.setPipelineManagerObject(pipelineManager);
-            } catch (WrongPipelineManagerException exception) {
-                exception.printStackTrace();
-            }
-        });
-        getPipelineManagers().add(pipelineManager);
+        Optional<Pipeline> pipeline = Pipeline.getPipelineByManager(pipelineManager.getClass());
+        if (!pipeline.isPresent())
+            return;
+
+        try {
+            pipeline.get().setPipelineManagerObject(pipelineManager);
+        } catch (WrongPipelineManagerException exception) {
+            exception.printStackTrace();
+        }
+
+        getPipelineManagers().put(pipeline.get(), pipelineManager);
     }
 
-    public List<PipelineManager> getPipelineManagers () {
+    public Map<Pipeline, PipelineManager> getPipelineManagers () {
         return pipelineManagers;
     }
 
     private void startUp () {
-        getPipelineManagers().stream()
-                .filter(pipelineManager -> pipelineManager instanceof RedisPipelineManager)
-                .forEach(pipelineManager -> ((RedisPipelineManager) pipelineManager).setJedisPool(jedisPool));
-        getPipelineManagers().forEach(PipelineManager::startUp);
+        getPipelineManagers().values().forEach(PipelineManager::startUp);
+
+        scanServersTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (redisConnection.isConnected()) {
+                    scanServers();
+                }
+            }
+        }.runTaskTimer(plugin, 0, 40);
 
         registerServer();
+        running = true;
     }
 
-    public void shutDown () {
-        getPipelineManagers().forEach(PipelineManager::shutDown);
+    public void shutDown (boolean killStartupTask) {
+        getPipelineManagers().values().forEach(PipelineManager::shutDown);
 
-        reconnectTask.cancel();
-        scanServersTask.cancel();
+        if (scanServersTask != null)
+            scanServersTask.cancel();
         unregisterServer();
+        running = false;
+        if (killStartupTask) {
+            startupTask.cancel();
+        }
     }
 
     public String getReceivePacketsKey () {
@@ -120,27 +120,8 @@ public class DataPacketManager {
         return applicationId.concat("-").concat(dataPacketClass.getName());
     }
 
-    private boolean connect () {
-        ClassLoader previous = Thread.currentThread().getContextClassLoader();
-        Thread.currentThread().setContextClassLoader(DataPacketManager.class.getClassLoader());
-        try {
-            jedisPool = new JedisPool(redisIp, redisPort);
-            jedisPool.getResource();
-            PluginData.log("Successfully connected to Redis!");
-        } catch (Exception e) {
-            PluginData.log("Error while connecting to Redis! Trying again in " + (RECONNECT_TICKS / 20) + " seconds...");
-            e.printStackTrace();
-            return false;
-        } finally {
-            Thread.currentThread().setContextClassLoader(previous);
-        }
-
-        return true;
-    }
-
     private void registerServer () {
-        try (Jedis jedis = jedisPool.getResource()) {
-            jedis.auth(redisPassword);
+        try (Jedis jedis = redisConnection.getResource()) {
             jedis.sadd(getClusterServersSetKey(), SERVER_ID);
         } catch (Exception e) {
             e.printStackTrace();
@@ -148,8 +129,7 @@ public class DataPacketManager {
     }
 
     private void unregisterServer () {
-        try (Jedis jedis = jedisPool.getResource()) {
-            jedis.auth(redisPassword);
+        try (Jedis jedis = redisConnection.getResource()) {
             jedis.srem(getClusterServersSetKey(), SERVER_ID);
         } catch (Exception e) {
             e.printStackTrace();
@@ -157,9 +137,7 @@ public class DataPacketManager {
     }
 
     private void scanServers () {
-        try (Jedis jedis = jedisPool.getResource()) {
-            jedis.auth(redisPassword);
-
+        try (Jedis jedis = redisConnection.getResource()) {
             SERVERS.clear();
             SERVERS.addAll(jedis.smembers(getClusterServersSetKey()));
         } catch (Exception e) {

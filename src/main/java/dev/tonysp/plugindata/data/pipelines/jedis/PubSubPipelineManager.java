@@ -1,5 +1,7 @@
 package dev.tonysp.plugindata.data.pipelines.jedis;
 
+import dev.tonysp.plugindata.connections.redis.RedisConnection;
+import dev.tonysp.plugindata.data.DataPacketManager;
 import dev.tonysp.plugindata.data.events.DataPacketReceiveEvent;
 import dev.tonysp.plugindata.data.packets.DataPacket;
 import dev.tonysp.plugindata.data.runnables.PublisherRunnable;
@@ -11,18 +13,11 @@ import java.io.IOException;
 
 public class PubSubPipelineManager extends RedisPipelineManager {
 
-    private static PubSubPipelineManager instance;
-
     private JedisPubSub jedisPubSub;
     private Thread publisherThread, subscriberThread;
 
-    public PubSubPipelineManager (String redisPassword) {
-        super(redisPassword);
-        instance = this;
-    }
-
-    public static PubSubPipelineManager getInstance () {
-        return instance;
+    public PubSubPipelineManager (RedisConnection redisConnection, DataPacketManager dataPacketManager) {
+        super(redisConnection, dataPacketManager);
     }
 
     @Override
@@ -55,7 +50,7 @@ public class PubSubPipelineManager extends RedisPipelineManager {
     }
 
     private void startPublisher () {
-        PublisherRunnable publisherRunnable = new PublisherRunnable(jedisPool, redisPassword);
+        PublisherRunnable publisherRunnable = new PublisherRunnable(redisConnection, this, dataPacketManager);
         publisherThread = new Thread(publisherRunnable);
         publisherThread.start();
     }
@@ -74,7 +69,7 @@ public class PubSubPipelineManager extends RedisPipelineManager {
             }
         };
 
-        SubscriberRunnable subscriberRunnable = new SubscriberRunnable(jedisPool, redisPassword, jedisPubSub);
+        SubscriberRunnable subscriberRunnable = new SubscriberRunnable(redisConnection, dataPacketManager, jedisPubSub);
         subscriberThread = new Thread(subscriberRunnable);
         subscriberThread.start();
 

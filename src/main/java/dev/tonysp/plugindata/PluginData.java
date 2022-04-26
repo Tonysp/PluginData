@@ -1,16 +1,19 @@
 package dev.tonysp.plugindata;
 
+import dev.tonysp.plugindata.connections.Connection;
+import dev.tonysp.plugindata.connections.ConnectionsManager;
+import dev.tonysp.plugindata.connections.redis.RedisConnection;
 import dev.tonysp.plugindata.data.DataPacketManager;
-import dev.tonysp.plugindata.databases.DatabaseManager;
 import org.bukkit.Bukkit;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.Optional;
 import java.util.logging.Level;
 
 public class PluginData extends JavaPlugin {
 
-    private DataPacketManager dataPacketManager;
-    private DatabaseManager databaseManager;
+    private static DataPacketManager dataPacketManager;
 
     @Override
     public void onEnable() {
@@ -19,42 +22,61 @@ public class PluginData extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        databaseManager.shutDown();
-        dataPacketManager.shutDown();
+        if (dataPacketManager != null)
+            dataPacketManager.shutDown(true);
+        ConnectionsManager.getInstance().shutDown();
     }
 
     private void load() {
         saveDefaultConfig();
         reloadConfig();
 
-        log("Loading database connections...");
+        log("Loading connections...");
+        ConfigurationSection connectionsConfig = getConfig().getConfigurationSection("connections");
+        if (connectionsConfig != null)
+        for (String connectionName : connectionsConfig.getKeys(false)) {
+            ConfigurationSection connectionConfig = connectionsConfig.getConfigurationSection(connectionName);
+            if (connectionConfig == null)
+                continue;
+            ConnectionsManager.getInstance().loadConnection(this, connectionName, connectionConfig);
+        }
+        log("...done");
+
+        if (!getConfig().getBoolean("data-packets.enabled", false)) {
+            return;
+        }
 
         boolean enableDataPacket = true;
-        String clusterId = getConfig().getString("cluster-id", null);
+        String clusterId = getConfig().getString("data-packets.cluster-id", null);
         if (clusterId == null || clusterId.equalsIgnoreCase("")) {
             log("Missing cluster-id, data packet functionality disabled");
             enableDataPacket = false;
         }
 
-        String serverId = getConfig().getString("server-id", null);
+        String serverId = getConfig().getString("data-packets.server-id", null);
         if (serverId == null || serverId.equalsIgnoreCase("")) {
             log("Missing server-id, data packet functionality disabled");
             enableDataPacket = false;
         }
 
-        String redisIp = getConfig().getString("redis.ip", "127.0.0.1");
-        int redisPort = getConfig().getInt("redis.port", 6379);
-        String redisPassword = getConfig().getString("redis.password", "");
+        String redisConnectionName = getConfig().getString("data-packets.redis-connection-name");
+        if (redisConnectionName == null || redisConnectionName.equalsIgnoreCase("")) {
+            log("Missing redis-connection-name, data packet functionality disabled");
+            enableDataPacket = false;
+        }
 
-        int packetSendAndRetrieveInterval = getConfig().getInt("batch-packet-send-and-retrieve-interval", 5);
-        boolean clearOldPackets = getConfig().getBoolean("batch-clear-old-packets", true);
+        Optional<RedisConnection> redisConnection = RedisConnection.byName(redisConnectionName);
+        if (!redisConnection.isPresent()) {
+            log("Invalid redis-connection-name, data packet functionality disabled");
+            enableDataPacket = false;
+        }
+
+        int packetSendAndRetrieveInterval = getConfig().getInt("data-packets.batch-packet-send-and-retrieve-interval", 5);
+        boolean clearOldPackets = getConfig().getBoolean("data-packets.batch-clear-old-packets", true);
 
         if (enableDataPacket) {
-            dataPacketManager = new DataPacketManager(getInstance(), redisIp, redisPort, redisPassword, clusterId, serverId, packetSendAndRetrieveInterval, clearOldPackets);
+            dataPacketManager = new DataPacketManager(getInstance(), redisConnection.get(), clusterId, serverId, packetSendAndRetrieveInterval, clearOldPackets);
         }
-        databaseManager = new DatabaseManager(getConfig());
-
-        log("...done");
     }
 
     public static void log(String text) {
@@ -67,5 +89,9 @@ public class PluginData extends JavaPlugin {
 
     public static PluginData getInstance () {
         return getPlugin(PluginData.class);
+    }
+
+    public static DataPacketManager getDataPacketManager () {
+        return dataPacketManager;
     }
 }
