@@ -18,6 +18,7 @@ connections:
     username: username
     password: password
 
+# enables sharing data across server instances
 data-packets:
   enabled: false
   redis-connection-name: redis-connection

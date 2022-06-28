@@ -52,13 +52,13 @@ public abstract class DataPacket implements Serializable {
 
     public DataPacket (String applicationId, Set<String> receivers) {
         this.applicationId = applicationId;
-        this.sender = PluginData.getDataPacketManager().SERVER_ID;
+        this.sender = PluginData.getInstance().getDataPackets().SERVER_ID;
         this.receivers = receivers;
     }
 
     public DataPacket (String applicationId) {
         this.applicationId = applicationId;
-        this.sender = PluginData.getDataPacketManager().SERVER_ID;
+        this.sender = PluginData.getInstance().getDataPackets().SERVER_ID;
     }
 
     public DataPacket (DataPacketManager dataPacketManager, String applicationId, Set<String> receivers) {

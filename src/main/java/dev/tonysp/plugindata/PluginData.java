@@ -1,6 +1,5 @@
 package dev.tonysp.plugindata;
 
-import dev.tonysp.plugindata.connections.Connection;
 import dev.tonysp.plugindata.connections.ConnectionsManager;
 import dev.tonysp.plugindata.connections.redis.RedisConnection;
 import dev.tonysp.plugindata.data.DataPacketManager;
@@ -13,7 +12,7 @@ import java.util.logging.Level;
 
 public class PluginData extends JavaPlugin {
 
-    private static DataPacketManager dataPacketManager;
+    private DataPacketManager dataPacketManager;
 
     @Override
     public void onEnable() {
@@ -34,12 +33,12 @@ public class PluginData extends JavaPlugin {
         log("Loading connections...");
         ConfigurationSection connectionsConfig = getConfig().getConfigurationSection("connections");
         if (connectionsConfig != null)
-        for (String connectionName : connectionsConfig.getKeys(false)) {
-            ConfigurationSection connectionConfig = connectionsConfig.getConfigurationSection(connectionName);
-            if (connectionConfig == null)
-                continue;
-            ConnectionsManager.getInstance().loadConnection(this, connectionName, connectionConfig);
-        }
+            for (String connectionName : connectionsConfig.getKeys(false)) {
+                ConfigurationSection connectionConfig = connectionsConfig.getConfigurationSection(connectionName);
+                if (connectionConfig == null)
+                    continue;
+                ConnectionsManager.getInstance().loadConnection(this, connectionName, connectionConfig);
+            }
         log("...done");
 
         if (!getConfig().getBoolean("data-packets.enabled", false)) {
@@ -79,19 +78,23 @@ public class PluginData extends JavaPlugin {
         }
     }
 
-    public static void log(String text) {
-        Bukkit.getLogger().log(Level.INFO, "[PluginData] " + text);
+    public static void log (Level level, String message) {
+        Bukkit.getLogger().log(level, "[PluginData] " + message);
     }
 
-    public static void logWarning(String text) {
-        Bukkit.getLogger().log(Level.WARNING, "[PluginData] " + text);
+    public static void log (String message) {
+        log(Level.INFO, message);
+    }
+
+    public static void logWarning (String message) {
+        log(Level.WARNING, message);
     }
 
     public static PluginData getInstance () {
         return getPlugin(PluginData.class);
     }
 
-    public static DataPacketManager getDataPacketManager () {
-        return dataPacketManager;
+    public DataPacketManager getDataPackets () {
+        return this.dataPacketManager;
     }
 }
